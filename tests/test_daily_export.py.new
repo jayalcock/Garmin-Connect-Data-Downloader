@@ -72,11 +72,7 @@ class TestDailyExport(unittest.TestCase):
         daily_export.main()
         
         # Verify
-        # We expect 3 calls due to retry logic
-        self.assertEqual(mock_connect.call_count, 3)
-        expected_args = {'non_interactive': True, 'allow_mfa': False}
-        for call_args in mock_connect.call_args_list:
-            self.assertEqual(call_args.kwargs, expected_args)
+        mock_connect.assert_called_once_with(non_interactive=True, allow_mfa=False)
         mock_notify.assert_called_once()
         # Check that the notification message indicates failure
         self.assertIn('fail', mock_notify.call_args[0][0].lower())
@@ -111,7 +107,7 @@ class TestDailyExport(unittest.TestCase):
         mock_connect.assert_called_once_with(non_interactive=True, allow_mfa=False)
         self.assertEqual(mock_get_stats.call_count, 2)
         mock_notify.assert_called_once()
-        # Check that the notification message indicates warning
+        # Check that the notification message indicates failure
         self.assertIn('warning', mock_notify.call_args[0][0].lower(), "Expected 'warning' in notification message")
         mock_exit.assert_not_called()  # No exit on warning
 

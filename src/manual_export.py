@@ -6,9 +6,20 @@ import sys
 import datetime
 from pathlib import Path
 
-# Import from the same package
-from . import downloader
-from .downloader import connect_to_garmin, get_stats
+# Import handling for both direct execution and being imported
+try:
+    # When imported from run_manual_export.py
+    from src import downloader
+    from src.downloader import connect_to_garmin, get_stats
+except ImportError:
+    try:
+        # When run directly or as a module in the src package
+        from . import downloader
+        from .downloader import connect_to_garmin, get_stats
+    except ImportError:
+        # Fallback for direct script execution
+        import downloader
+        from downloader import connect_to_garmin, get_stats
 
 def main():
     """Run manual Garmin data export"""

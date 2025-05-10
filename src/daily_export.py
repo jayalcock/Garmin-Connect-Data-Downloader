@@ -8,9 +8,20 @@ import subprocess
 import json
 from pathlib import Path
 
-# Import from the same package
-from . import downloader
-from .downloader import load_saved_credentials, decrypt_password, get_stats, connect_to_garmin
+# Import handling for both direct execution and being imported
+try:
+    # When imported from run_daily_export.py
+    from src import downloader
+    from src.downloader import load_saved_credentials, decrypt_password, get_stats, connect_to_garmin
+except ImportError:
+    try:
+        # When run directly or as a module in the src package
+        from . import downloader
+        from .downloader import load_saved_credentials, decrypt_password, get_stats, connect_to_garmin
+    except ImportError:
+        # Fallback for direct script execution
+        import downloader
+        from downloader import load_saved_credentials, decrypt_password, get_stats, connect_to_garmin
 
 # Maximum number of attempts to connect
 MAX_ATTEMPTS = 3
