@@ -13,7 +13,7 @@ from pathlib import Path
 # Add the parent directory to the path to find the downloader module
 sys.path.append(str(Path(__file__).parent.parent))
 
-from downloader import connect_to_garmin
+from src.downloader import connect_to_garmin
 
 def test_mfa_auth():
     """Test different authentication methods with Garmin Connect"""
