@@ -6,8 +6,8 @@
    - Modified the file naming from date-specific files to a single `garmin_stats.csv`
    - Kept the existing append functionality that adds new rows to this file
 
-2. **Enhanced the copy_to_icloud function** to create daily backups
-   - Main file `garmin_stats.csv` is copied to iCloud Drive 
+2. **Enhanced the backup_data_file function** to create daily backups
+   - Main file `garmin_stats.csv` is copied to Nextcloud 
    - A timestamped backup is also created each day: `garmin_stats_backup_YYYY-MM-DD.csv`
 
 3. **Created a merge utility** to consolidate existing CSV files
@@ -23,8 +23,8 @@
 ## Benefits of This Approach
 
 - **Easier Data Analysis**: Having all data in a single file makes it simpler to analyze trends over time
-- **Better Backup Protection**: Daily backups in iCloud provide protection against data corruption
+- **Better Backup Protection**: Daily backups in Nextcloud provide protection against data corruption
 - **Backward Compatibility**: Original date-specific files are kept in an archive
 - **More Efficient Storage**: Avoids duplication of header information in multiple files
 
-The system now appends new data to the existing CSV file each day while maintaining daily backups in iCloud for additional safety.
+The system now appends new data to the existing CSV file each day while maintaining daily backups in Nextcloud for additional safety.

@@ -58,7 +58,7 @@ These tests cover the following areas:
 
 4. **Export Functionality**
    - CSV file creation and formatting
-   - iCloud Drive integration
+   - Nextcloud backup integration
    - Field selection and data formatting
 
 5. **Automation**

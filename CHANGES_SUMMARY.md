@@ -9,7 +9,7 @@
    - Original date-specific files are preserved in an `archive` directory
 
 2. **Enhanced Backup Strategy**
-   - Added daily timestamped backups to iCloud (`garmin_stats_backup_YYYY-MM-DD.csv`)
+   - Added daily timestamped backups to Nextcloud (`garmin_stats_backup_YYYY-MM-DD.csv`)
    - Main file is continuously updated with new rows as data is collected
    - Ensures both data preservation and efficient storage
 
@@ -34,7 +34,7 @@
    - Reduces the number of files in the exports directory
 
 3. **Better Backup Protection**
-   - Daily backup copies in iCloud provide point-in-time recovery options
+   - Daily backup copies in Nextcloud provide point-in-time recovery options
    - Original files are preserved in an archive directory
 
 4. **Backwards Compatibility**

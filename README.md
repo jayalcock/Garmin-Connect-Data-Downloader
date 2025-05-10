@@ -28,7 +28,7 @@ Data download/
 ├── exports/                 # Directory for exported CSV files
 │   ├── garmin_stats.csv     # Main CSV file with all data (each row is a date)
 │   ├── archive/             # Archive of date-specific CSV files
-│   └── garmin_stats_backup_*.csv # Daily backups in iCloud
+│   └── garmin_stats_backup_*.csv # Daily backups in Nextcloud
 └── logs/                    # Directory for log files
     └── auth_status.json     # Authentication status log
 ```
@@ -73,8 +73,8 @@ The application stores all your Garmin Connect health data in a single CSV file:
 
 - The main data file is `exports/garmin_stats.csv`
 - Each row represents data for a specific date
-- The file is automatically backed up to iCloud (if available) 
-- Daily backups are created in iCloud as `garmin_stats_backup_YYYY-MM-DD.csv` 
+- The file is automatically backed up to Nextcloud 
+- Daily backups are created in Nextcloud as `garmin_stats_backup_YYYY-MM-DD.csv` 
 
 ### Legacy Data Migration
 

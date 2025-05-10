@@ -57,9 +57,9 @@ class TestDataRetrieval(unittest.TestCase):
         self.assertEqual(result.get('steps'), 9000)
     
     @patch('src.downloader.export_to_csv')
-    @patch('src.downloader.copy_to_icloud')
+    @patch('src.downloader.backup_data_file')
     @patch('src.downloader.dt.date')
-    def test_get_stats_with_export(self, mock_date, mock_copy, mock_export):
+    def test_get_stats_with_export(self, mock_date, mock_backup, mock_export):
         """Test get_stats with export option enabled"""
         # Setup
         mock_date_obj = MagicMock()
@@ -79,7 +79,7 @@ class TestDataRetrieval(unittest.TestCase):
         # Verify
         self.assertIsNotNone(result)
         mock_export.assert_called_once()
-        mock_copy.assert_called_once_with(Path('/test/exports/garmin_stats.csv'))
+        mock_backup.assert_called_once_with(Path('/test/exports/garmin_stats.csv'))
     
     def test_get_stats_none_client(self):
         """Test get_stats with None client"""

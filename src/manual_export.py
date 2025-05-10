@@ -30,7 +30,7 @@ def main():
         print("\nData export complete! Files have been saved to:")
         export_dir = Path(__file__).parent / "exports"
         print(f"- Local directory: {export_dir}")
-        print(f"- iCloud directory: ~/Library/Mobile Documents/com~apple~CloudDocs/Garmin Health Data/")
+        print(f"- Nextcloud directory: /Users/jay/Nextcloud/Garmin Health Data/")
     else:
         print("Failed to connect to Garmin Connect")
         sys.exit(1)

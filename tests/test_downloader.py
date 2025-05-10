@@ -16,7 +16,7 @@ from src.downloader import (
     save_credentials, 
     decrypt_password,
     export_to_csv,
-    copy_to_icloud
+    backup_data_file
 )
 
 class TestCredentialFunctions(unittest.TestCase):
@@ -118,13 +118,13 @@ class TestExportFunctions(unittest.TestCase):
     
     @patch('shutil.copy2')
     @patch('pathlib.Path.mkdir')
-    def test_copy_to_icloud(self, mock_mkdir, mock_copy):
-        """Test copying a file to iCloud Drive"""
+    def test_backup_data_file(self, mock_mkdir, mock_copy):
+        """Test backing up a file to Nextcloud"""
         # Setup
         test_file = Path("/test/exports/garmin_stats.csv")
         
         # Execute
-        result = copy_to_icloud(test_file)
+        result = backup_data_file(test_file)
         
         # Verify
         mock_mkdir.assert_called_once()
@@ -134,14 +134,14 @@ class TestExportFunctions(unittest.TestCase):
     
     @patch('shutil.copy2')
     @patch('pathlib.Path.mkdir')
-    def test_copy_to_icloud_exception(self, mock_mkdir, mock_copy):
-        """Test handling an exception when copying to iCloud"""
+    def test_backup_data_file_exception(self, mock_mkdir, mock_copy):
+        """Test handling an exception when backing up to Nextcloud"""
         # Setup
         test_file = Path("/test/exports/garmin_stats.csv")
         mock_copy.side_effect = Exception("Test error")
         
         # Execute
-        result = copy_to_icloud(test_file)
+        result = backup_data_file(test_file)
         
         # Verify
         mock_mkdir.assert_called_once()

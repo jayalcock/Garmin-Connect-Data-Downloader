@@ -272,37 +272,36 @@ def export_to_csv(stats: Dict[str, Any], date_str: str, export_dir: Path) -> Pat
     print(f"Exported data to {csv_file}")
     return csv_file
 
-def copy_to_icloud(file_path: Path) -> bool:
-    """Copy a file to iCloud Drive
+def backup_data_file(file_path: Path) -> bool:
+    """Backup a file to Nextcloud
     
     Args:
-        file_path: Path to the file to copy
+        file_path: Path to the file to backup
         
     Returns:
         True if successful, False otherwise
     """
-    # Define the iCloud Drive path for your data
-    # On macOS, iCloud Drive is typically in ~/Library/Mobile Documents/com~apple~CloudDocs/
-    icloud_dir = Path.home() / "Library/Mobile Documents/com~apple~CloudDocs/Garmin Health Data"
+    # Define the Nextcloud path for your data
+    nextcloud_dir = Path("/Users/jay/Nextcloud/Garmin Health Data")
     
     try:
-        # Ensure the iCloud directory exists
-        icloud_dir.mkdir(parents=True, exist_ok=True)
+        # Ensure the Nextcloud directory exists
+        nextcloud_dir.mkdir(parents=True, exist_ok=True)
         
-        # Copy the file to iCloud
-        dest_path = icloud_dir / file_path.name
+        # Copy the file to Nextcloud
+        dest_path = nextcloud_dir / file_path.name
         shutil.copy2(file_path, dest_path)
-        print(f"Copied file to iCloud: {dest_path}")
+        print(f"Backed up file to Nextcloud: {dest_path}")
         
         # Also create a timestamped backup copy
         today = dt.date.today().isoformat()
-        backup_path = icloud_dir / f"garmin_stats_backup_{today}.csv"
+        backup_path = nextcloud_dir / f"garmin_stats_backup_{today}.csv"
         shutil.copy2(file_path, backup_path)
-        print(f"Created backup in iCloud: {backup_path}")
+        print(f"Created dated backup in Nextcloud: {backup_path}")
         
         return True
     except Exception as e:
-        print(f"Error copying to iCloud: {e}")
+        print(f"Error copying to Nextcloud: {e}")
         return False
 
 def get_stats(garmin_client: Optional[Garmin], date_str: Optional[str] = None, export: bool = False) -> Optional[Dict[str, Any]]:
@@ -381,7 +380,7 @@ def get_stats(garmin_client: Optional[Garmin], date_str: Optional[str] = None, e
         if export:
             export_dir = Path(__file__).parent / "exports"
             csv_path = export_to_csv(stats, date_str, export_dir)
-            copy_to_icloud(csv_path)
+            backup_data_file(csv_path)
         
         # Ask if user wants to see all data
         if input("\nShow all available data? (y/n): ").strip().lower() == 'y':
@@ -466,7 +465,7 @@ def setup_daily_export(garmin_client: Optional[Garmin]) -> None:
         return
     
     print("\n===== Setup Daily Export =====")
-    print("This will set up a daily automatic export of your Garmin data to iCloud.")
+    print("This will set up a daily automatic export of your Garmin data to Nextcloud.")
     
     # Create the export directory
     export_dir = Path(__file__).parent / "exports"
@@ -555,8 +554,8 @@ def show_menu(garmin_client: Optional[Garmin]) -> None:
         print("1. Get today's stats")
         print("2. Get stats for a specific date")
         print("3. Get recent activities")
-        print("4. Export today's data to CSV and iCloud")
-        print("5. Setup daily automatic export to iCloud")
+        print("4. Export today's data to CSV and Nextcloud")
+        print("5. Setup daily automatic export to Nextcloud")
         print("6. Exit")
         
         choice = input("\nEnter your choice (1-6): ").strip()
