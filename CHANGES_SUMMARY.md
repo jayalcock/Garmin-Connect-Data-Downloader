@@ -6,7 +6,8 @@
    - Changed from creating date-specific files (`garmin_stats_YYYY-MM-DD.csv`) to using a single CSV file (`garmin_stats.csv`)
    - Each row in the CSV file represents data for a specific date
    - Existing date-specific files are automatically merged into the consolidated file
-   - Original date-specific files are preserved in an `archive` directory
+   - Original date-specific files preserved in the `archive` directory
+   - New data is now automatically archived by date in both formats
 
 2. **Enhanced Backup Strategy**
    - Added daily timestamped backups to Nextcloud (`garmin_stats_backup_YYYY-MM-DD.csv`)
@@ -28,6 +29,7 @@
 1. **Easier Data Analysis**
    - All data is in a single file, making trend analysis simpler
    - No need to combine multiple files for analysis or reporting
+   - Enhanced date fields (year, month, day, day_of_week) for better filtering and analysis
 
 2. **More Efficient Storage**
    - Headers are stored only once, reducing redundancy

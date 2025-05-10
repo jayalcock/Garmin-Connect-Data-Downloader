@@ -5,17 +5,23 @@
 1. **Date-specific CSV files moved to archive**
    - Moved all `garmin_stats_YYYY-MM-DD.csv` files to `exports/archive/` directory
    - This maintains the data while keeping the main exports directory clean
+   - New data is now automatically archived by date
 
-2. **Standardized root-level Python files**
+2. **Enhanced date information in CSV files**
+   - Added explicit date fields (year, month, day, day_of_week)
+   - Original date field preserved for backward compatibility
+   - Dated CSV files automatically created in `exports/archive/` directory
+
+3. **Standardized root-level Python files**
    - Made `daily_export.py` a symlink to `src/daily_export.py` 
    - This matches the pattern used by `downloader.py`, which was already a symlink
    - Ensures all code changes happen in the src directory
 
-3. **Created src/exports directory**
+4. **Created src/exports directory**
    - Added this directory to maintain consistency with the project structure
    - This ensures the export path is available in both locations
 
-4. **Removed temporary/backup files**
+5. **Removed temporary/backup files**
    - Cleaned up any `.bak` files
 
 ## Project Structure

@@ -168,8 +168,12 @@ def export_to_csv(stats: Dict[str, Any], date_str: str, export_dir: Path) -> Pat
     csv_file = export_dir / "garmin_stats.csv"
     
     # Define the fields we want to export
+    date_fields = [
+        'date', 'year', 'month', 'day', 'day_of_week'
+    ]
+    
     base_fields = [
-        'date', 'steps', 'totalDistanceMeters', 'totalKilocalories', 
+        'steps', 'totalDistanceMeters', 'totalKilocalories', 
         'activeKilocalories', 'bmrKilocalories', 'restingHeartRate', 'maxHeartRate',
         'minHeartRate', 'lastSevenDaysAvgRestingHeartRate', 'totalSteps', 
         'dailyStepGoal', 'floorsAscended', 'floorsDescended'
@@ -224,6 +228,7 @@ def export_to_csv(stats: Dict[str, Any], date_str: str, export_dir: Path) -> Pat
     
     # Group fields by category for better organization
     field_groups = {
+        "Date": date_fields,
         "Base": base_fields,
         "Activity": activity_fields,
         "Sleep": sleep_fields,
@@ -236,13 +241,13 @@ def export_to_csv(stats: Dict[str, Any], date_str: str, export_dir: Path) -> Pat
     }
     
     # Instead of filtering, create a complete row with all possible fields
-    all_fields = ['date']  # Start with date
+    all_fields = []  # Will be filled by the loop below
     for category, fields in field_groups.items():
         all_fields.extend(fields)
     
     # Convert stats to a row with all fields, using blank for missing data
-    row_data = {'date': date_str}
-    for field in all_fields[1:]:  # Skip 'date' as we already added it
+    row_data = {}
+    for field in all_fields:
         row_data[field] = stats.get(field, '')
     
     # Write to CSV
@@ -269,7 +274,19 @@ def export_to_csv(stats: Dict[str, Any], date_str: str, export_dir: Path) -> Pat
             writer.writeheader()
         writer.writerow(row_data)
     
+    # Also create a dated archive copy for backup
+    archive_dir = export_dir / "archive"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    dated_csv_file = archive_dir / f"garmin_stats_{date_str}.csv"
+    
+    # Always create a fresh dated file
+    with open(dated_csv_file, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.DictWriter(f, fieldnames=all_fields)
+        writer.writeheader()
+        writer.writerow(row_data)
+    
     print(f"Exported data to {csv_file}")
+    print(f"Archived date-specific data to {dated_csv_file}")
     return csv_file
 
 def backup_data_file(file_path: Path) -> bool:
@@ -336,6 +353,18 @@ def get_stats(garmin_client: Optional[Garmin], date_str: Optional[str] = None, e
         
         # Get stats for the specified date
         stats = garmin_client.get_stats_and_body(date_str)
+        
+        # Add date information to the stats dictionary
+        stats['date'] = date_str
+        
+        # Also add year, month, day as separate fields for easier analysis
+        year, month, day = date_str.split('-')
+        stats['year'] = year
+        stats['month'] = month
+        stats['day'] = day
+        
+        # Add day of week (0=Monday, 6=Sunday)
+        stats['day_of_week'] = date_obj.weekday()
         
         # Display summary stats
         print(f"\n===== Summary for {date_str} =====")
