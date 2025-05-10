@@ -34,6 +34,28 @@ def send_notification(title, message):
     except Exception as e:
         print(f"Error sending notification: {e}")
 
+def download_specific_dates(client, date_list):
+    """Download data for specific dates
+    
+    Args:
+        client: Garmin Connect client
+        date_list: List of dates in YYYY-MM-DD format
+        
+    Returns:
+        List of dates for which data was successfully retrieved
+    """
+    successful_dates = []
+    
+    for date_str in date_list:
+        print(f"Downloading data for {date_str}...")
+        result = get_stats(client, date_str, export=True)
+        if result:
+            successful_dates.append(date_str)
+        else:
+            print(f"Failed to retrieve data for {date_str}")
+    
+    return successful_dates
+
 def main():
     """Run the daily export"""
     start_time = datetime.datetime.now().isoformat()
@@ -109,16 +131,33 @@ def main():
         sys.exit(1)
     
     try:
-        # Get yesterday's data (more likely to be complete than today's)
-        yesterday = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
-        result_yesterday = get_stats(client, yesterday, export=True)
+        # Get data for missing days in the last 5 days
+        today = datetime.date.today()
+        dates_to_check = []
         
-        # Also get today's data
-        today = datetime.date.today().isoformat()
-        result_today = get_stats(client, today, export=True)
+        # Create a list of dates for the last 5 days
+        for i in range(5, 0, -1):  # 5 days ago up to yesterday
+            check_date = (today - datetime.timedelta(days=i)).isoformat()
+            dates_to_check.append(check_date)
         
-        if result_yesterday or result_today:
-            send_notification("Garmin Export Successful", f"Exported data for {yesterday} and {today}")
+        # Add yesterday and today
+        yesterday = (today - datetime.timedelta(days=1)).isoformat()
+        today_str = today.isoformat()
+        
+        # Always include yesterday and today for the freshest data
+        if yesterday not in dates_to_check:
+            dates_to_check.append(yesterday)
+        dates_to_check.append(today_str)
+        
+        print(f"Checking data for the following dates: {', '.join(dates_to_check)}")
+        successful_dates = download_specific_dates(client, dates_to_check)
+        
+        if successful_dates:
+            date_list = ", ".join(successful_dates)
+            message = f"Exported data for {len(successful_dates)} dates: {date_list}"
+            if len(message) > 200:  # Avoid notification text being too long
+                message = f"Exported data for {len(successful_dates)} dates"
+            send_notification("Garmin Export Successful", message)
         else:
             send_notification("Garmin Export Warning", "Connected but no data exported")
     except Exception as e:
