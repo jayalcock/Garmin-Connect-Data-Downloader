@@ -446,29 +446,52 @@ def get_activities(garmin_client: Optional[Garmin], start_date: Optional[str] = 
     
     Args:
         garmin_client: The Garmin Connect client
-        start_date: The start date in ISO format (YYYY-MM-DD), or None for recent activities
+        start_date: The start date in ISO format (YYYY-MM-DD), or None for recent activities.
+                    If provided, will show only activities from this date.
         limit: Maximum number of activities to retrieve
     """
     if not garmin_client:
         return
         
     try:
+        specific_date = None
         if start_date:
             try:
-                dt.date.fromisoformat(start_date)  # Validate date format
+                specific_date = dt.date.fromisoformat(start_date)  # Validate date format
             except ValueError:
                 print(f"Invalid date format: {start_date}. Please use YYYY-MM-DD format.")
                 return
         
+        # Always get activities from Garmin Connect
         print(f"Getting recent activities (max: {limit})...")
         activities = garmin_client.get_activities(0, limit)
         
         if not activities:
             print("No activities found for the specified period.")
             return
+        
+        # Filter activities by date if a specific date was provided
+        filtered_activities = activities
+        if specific_date:
+            filtered_activities = []
+            for activity in activities:
+                start_time = activity.get("startTimeLocal", "")
+                if start_time and "T" in start_time:
+                    activity_date_str = start_time.split("T")[0]
+                    try:
+                        if activity_date_str == specific_date.isoformat():
+                            filtered_activities.append(activity)
+                    except:
+                        # If date parsing fails, include activity by default
+                        pass
+            
+            if not filtered_activities:
+                print(f"No activities found for date {specific_date.isoformat()}.")
+                return
+            print(f"Found {len(filtered_activities)} activities for date {specific_date.isoformat()}")
             
         print(f"\n===== Recent Activities =====")
-        for i, activity in enumerate(activities, 1):
+        for i, activity in enumerate(filtered_activities, 1):
             start_time = activity.get("startTimeLocal", "Unknown")
             name = activity.get("activityName", "Unknown")
             distance = activity.get("distance", 0)
@@ -490,10 +513,24 @@ def get_activities(garmin_client: Optional[Garmin], start_date: Optional[str] = 
             if activity_id:
                 print(f"Activity ID: {activity_id}")
                 
-                # Ask if user wants to download this activity
-                download = input(f"Download activity {i} in TCX format? (y/n): ").strip().lower()
-                if download == 'y':
+                # Check if the activity is from today
+                is_from_today = False
+                if start_time:
+                    # Parse the date part from startTimeLocal (format: YYYY-MM-DDThh:mm:ss.000)
+                    if "T" in start_time:
+                        activity_date = start_time.split("T")[0]
+                        today_date = dt.date.today().isoformat()
+                        is_from_today = (activity_date == today_date)
+                
+                # Automatically download today's activities
+                if is_from_today:
+                    print(f"Automatically downloading today's activity {i} in TCX format...")
                     download_activity_file(garmin_client, activity_id, 'TCX')
+                else:
+                    # For older activities, still ask for confirmation
+                    download = input(f"Download activity {i} from {start_time} in TCX format? (y/n): ").strip().lower()
+                    if download == 'y':
+                        download_activity_file(garmin_client, activity_id, 'TCX')
                 
     except (ConnectionError, TimeoutError) as e:
         print(f"Connection error while getting activities: {e}")
@@ -711,6 +748,64 @@ def download_activity_file(garmin_client: Optional[Garmin], activity_id: str,
         traceback.print_exc()
         return None
 
+def download_today_activities(garmin_client: Optional[Garmin], format_type: str = 'TCX') -> None:
+    """Download all of today's activities
+    
+    This is a convenience function that gets today's activities and downloads them automatically.
+    
+    Args:
+        garmin_client: The Garmin Connect client
+        format_type: Format type ('TCX', 'GPX', 'KML', 'CSV', 'ORIGINAL')
+    """
+    if not garmin_client:
+        print("Not connected to Garmin Connect")
+        return
+    
+    today_date = dt.date.today().isoformat()
+    print(f"Searching for activities from today ({today_date})...")
+    
+    # Get a larger number of recent activities to ensure we catch all of today's
+    try:
+        activities = garmin_client.get_activities(0, 10)
+        
+        if not activities:
+            print("No recent activities found.")
+            return
+        
+        # Filter for today's activities
+        todays_activities = []
+        for activity in activities:
+            start_time = activity.get("startTimeLocal", "")
+            if start_time and "T" in start_time:
+                activity_date = start_time.split("T")[0]
+                if activity_date == today_date:
+                    todays_activities.append(activity)
+        
+        if not todays_activities:
+            print(f"No activities found for today ({today_date}).")
+            return
+        
+        print(f"Found {len(todays_activities)} activities from today.")
+        
+        # Download each activity
+        for i, activity in enumerate(todays_activities, 1):
+            activity_id = activity.get("activityId")
+            name = activity.get("activityName", "Unknown")
+            
+            if activity_id:
+                print(f"\nDownloading activity {i}/{len(todays_activities)}: {name}")
+                download_activity_file(garmin_client, activity_id, format_type)
+            
+        print(f"\nFinished downloading all {len(todays_activities)} activities from today.")
+        
+    except (ConnectionError, TimeoutError) as e:
+        print(f"Connection error while getting activities: {e}")
+    except ValueError as e:
+        print(f"Value error while getting activities: {e}")
+    except Exception as e:
+        print(f"Error getting activities: {e}")
+        traceback.print_exc()
+
 def show_menu(garmin_client: Optional[Garmin]) -> None:
     """Show menu of options for Garmin Connect data retrieval"""
     if not garmin_client:
@@ -725,9 +820,10 @@ def show_menu(garmin_client: Optional[Garmin]) -> None:
         print("4. Export today's data to CSV and Nextcloud")
         print("5. Setup daily automatic export to Nextcloud")
         print("6. Download an activity file")
-        print("7. Exit")
+        print("7. Download today's activities automatically")
+        print("8. Exit")
         
-        choice = input("\nEnter your choice (1-7): ").strip()
+        choice = input("\nEnter your choice (1-8): ").strip()
         
         if choice == "1":
             get_stats(garmin_client)
@@ -750,10 +846,16 @@ def show_menu(garmin_client: Optional[Garmin]) -> None:
                 format_type = "TCX"  # Set default format to TCX
             download_activity_file(garmin_client, activity_id, format_type)
         elif choice == "7":
+            # Automatically download today's activities 
+            format_type = input("Enter format type (default: TCX, others: GPX, KML, CSV, ORIGINAL): ").strip().upper()
+            if not format_type:
+                format_type = "TCX"  # Set default format to TCX
+            download_today_activities(garmin_client, format_type)
+        elif choice == "8":
             print("Goodbye!")
             break
         else:
-            print("Invalid choice. Please select 1-7.")
+            print("Invalid choice. Please select 1-8.")
 
 if __name__ == "__main__":
     client = connect_to_garmin()

@@ -21,8 +21,7 @@
 
 5. **Updated documentation to reflect the changes**
    - Modified README.md to mention Nextcloud instead of iCloud
-   - Updated CSV_STORAGE_CHANGES.md to reference Nextcloud
-   - Updated CHANGES_SUMMARY.md to reflect the backup location change
+   - Updated CHANGELOG.md to reflect the backup location change
    - Updated menu text in the interactive interface
 
 ## Benefits of This Change
