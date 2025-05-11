@@ -16,7 +16,7 @@ def main():
     print(f"Running daily Garmin Connect export on {datetime.datetime.now().isoformat()}")
     
     # Connect to Garmin Connect using saved credentials (non-interactive)
-    client = connect_to_garmin()
+    client = connect_to_garmin(non_interactive=True, allow_mfa=False)
     
     if client:
         # Get yesterday's data (more likely to be complete than today's)

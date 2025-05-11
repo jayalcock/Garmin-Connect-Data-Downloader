@@ -147,7 +147,7 @@ def connect_to_garmin(non_interactive: bool = False, allow_mfa: bool = True) -> 
             print("Note: If MFA is required, you will be prompted to enter a code.")
             # Login first step - may need MFA
             try:
-                result = garmin.login(return_on_mfa=True)
+                result = garmin.login()
                 # Check if a tuple was returned (indicating MFA is needed)
                 if isinstance(result, tuple) and len(result) == 2 and result[0] == "needs_mfa":
                     mfa_code = get_mfa_code()
