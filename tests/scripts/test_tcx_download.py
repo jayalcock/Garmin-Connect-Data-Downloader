@@ -3,7 +3,7 @@
 
 import importlib.util
 import os
-fixed_downloader_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'fixed_downloader.py')
+fixed_downloader_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'fixed_downloader.py')
 spec = importlib.util.spec_from_file_location('fixed_downloader', fixed_downloader_path)
 fixed_downloader = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(fixed_downloader)
@@ -12,7 +12,7 @@ download_activity_file = fixed_downloader.download_activity_file
 
 def test_tcx_download():
     """Test downloading a TCX file with the fixed filename generation"""
-    client = connect_to_garmin()
+    client = connect_to_garmin(non_interactive=True)
     if client:
         # Use a sample activity ID - this may not exist on your account
         # but it will test the filename generation code

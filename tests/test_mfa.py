@@ -28,7 +28,7 @@ def test_mfa_auth():
     
     # First test: Standard login with MFA enabled
     print("Attempting login with MFA support enabled...")
-    client1 = connect_to_garmin(non_interactive=False, allow_mfa=True)
+    client1 = connect_to_garmin(non_interactive=True, allow_mfa=True)
     
     if client1:
         print("\n✅ SUCCESS: Successfully logged in with MFA support enabled.")
@@ -44,7 +44,7 @@ def test_mfa_auth():
     print("Attempting login with MFA support disabled...")
     print("NOTE: This should succeed if you're using an app-specific password")
     print("      or if your account doesn't require MFA.")
-    client2 = connect_to_garmin(non_interactive=False, allow_mfa=False)
+    client2 = connect_to_garmin(non_interactive=True, allow_mfa=False)
     
     if client2:
         print("\n✅ SUCCESS: Successfully logged in without MFA support!")

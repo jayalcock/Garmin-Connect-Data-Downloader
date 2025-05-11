@@ -5,7 +5,6 @@ import os
 import sys
 import unittest
 from unittest.mock import patch, MagicMock
-import datetime as dt
 from pathlib import Path
 import importlib.util
 
@@ -39,7 +38,7 @@ class TestDataRetrieval(unittest.TestCase):
         mock_garmin.get_stats_and_body.return_value = {'steps': 10000}
         
         # Call function
-        result = get_stats(mock_garmin)
+        result = get_stats(mock_garmin, interactive=False)
         
         # Verify
         self.assertIsNotNone(result)
@@ -59,7 +58,7 @@ class TestDataRetrieval(unittest.TestCase):
         mock_garmin.get_stats_and_body.return_value = {'steps': 9000}
         
         # Call function
-        result = get_stats(mock_garmin, '2025-05-08')
+        result = get_stats(mock_garmin, '2025-05-08', interactive=False)
         
         # Verify
         self.assertIsNotNone(result)
@@ -67,10 +66,11 @@ class TestDataRetrieval(unittest.TestCase):
         mock_garmin.get_stats_and_body.assert_called_once_with('2025-05-08')
         self.assertEqual(result.get('steps'), 9000)
     
+    @patch('json.dump')
     @patch('fixed_downloader.export_to_csv')
     @patch('fixed_downloader.backup_data_file')
     @patch('fixed_downloader.dt.date')
-    def test_get_stats_with_export(self, mock_date, mock_backup, mock_export):
+    def test_get_stats_with_export(self, mock_json_dump, mock_export, mock_backup, mock_date):
         """Test get_stats with export option enabled"""
         # Setup
         mock_date_obj = MagicMock()
@@ -85,7 +85,7 @@ class TestDataRetrieval(unittest.TestCase):
         mock_export.return_value = Path('/test/exports/garmin_stats.csv')
         
         # Call function
-        result = get_stats(mock_garmin, export=True)
+        result = get_stats(mock_garmin, export=True, interactive=False)
         
         # Verify
         self.assertIsNotNone(result)
@@ -95,7 +95,7 @@ class TestDataRetrieval(unittest.TestCase):
     def test_get_stats_none_client(self):
         """Test get_stats with None client"""
         # Call function
-        result = get_stats(None)
+        result = get_stats(None, interactive=False)
         
         # Verify
         self.assertIsNone(result)

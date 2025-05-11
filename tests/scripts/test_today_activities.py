@@ -11,7 +11,7 @@ parent_dir = os.path.abspath(os.path.dirname(__file__))
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
-fixed_downloader_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'fixed_downloader.py')
+fixed_downloader_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'fixed_downloader.py')
 spec = importlib.util.spec_from_file_location('fixed_downloader', fixed_downloader_path)
 fixed_downloader = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(fixed_downloader)
@@ -23,7 +23,7 @@ def main():
     print("Testing automatic download of today's activities")
     
     # Connect to Garmin Connect
-    garmin_client = connect_to_garmin()
+    garmin_client = connect_to_garmin(non_interactive=True)
     
     if garmin_client:
         # Download today's activities in TCX format
