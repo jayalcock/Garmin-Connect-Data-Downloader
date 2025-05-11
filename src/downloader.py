@@ -118,7 +118,36 @@ def connect_to_garmin(non_interactive: bool = False, allow_mfa: bool = True) -> 
             # The login call is bypassed in test mode
         elif allow_mfa:
             print("Note: If MFA is required, you will be prompted to enter a code.")
-            gc.login()  # This will prompt for MFA code if needed
+            import builtins
+            import sys
+            import importlib.util
+            # Try to import email_utils from the same directory as this file
+            try:
+                from .email_utils import get_latest_mfa_code_from_email
+            except (ImportError, SystemError):
+                # Fallback: add src directory to sys.path and import
+                import sys as sys_mod
+                import os as os_mod  # Avoid shadowing the global os
+                src_dir = os_mod.path.dirname(os_mod.path.abspath(__file__))
+                if src_dir not in sys_mod.path:
+                    sys_mod.path.insert(0, src_dir)
+                from email_utils import get_latest_mfa_code_from_email
+            original_input = builtins.input
+            def auto_mfa_input(prompt=""):
+                if "code" in prompt.lower():
+                    print("Fetching MFA code from email...")
+                    code = get_latest_mfa_code_from_email()
+                    if code:
+                        print(f"Auto-filled MFA code: {code}")
+                        return code
+                    else:
+                        print("Could not fetch MFA code from email, please enter manually.")
+                return original_input(prompt)
+            builtins.input = auto_mfa_input
+            try:
+                gc.login()
+            finally:
+                builtins.input = original_input
         else:
             # Attempt login but don't handle MFA prompts
             # This will fail if MFA is required
@@ -775,13 +804,23 @@ def download_today_activities(garmin_client: Optional[Garmin], format_type: str 
         # Filter for today's activities
         todays_activities = []
         for activity in activities:
-            start_time = activity.get("startTimeLocal", "")
-            if start_time and "T" in start_time:
-                activity_date = start_time.split("T")[0]
-                if activity_date == today_date:
-                    todays_activities.append(activity)
-        
+            # Prefer local time; fallback to GMT timestamp
+            start_time = activity.get("startTimeLocal") or activity.get("startTimeGMT")
+            if not start_time:
+                continue
+            # Handle both 'T' and space-separated datetime formats
+            if 'T' in start_time:
+                date_token = start_time.split('T')[0]
+            else:
+                date_token = start_time.split()[0]
+            if date_token == today_date:
+                todays_activities.append(activity)
         if not todays_activities:
+            # Debug: list all activity timestamps to see why none match today
+            print("Debug: Activity timestamps:")
+            for idx, activity in enumerate(activities, start=1):
+                ts = activity.get("startTimeLocal") or activity.get("startTimeGMT")
+                print(f"  {idx}. {ts}")
             print(f"No activities found for today ({today_date}).")
             return
         
