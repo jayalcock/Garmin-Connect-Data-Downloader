@@ -6,9 +6,9 @@ import sys
 import datetime
 
 # Add the parent directory to find the fixed_downloader module
-parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(parent_dir)
-
+parent_dir = os.path.dirname(os.path.abspath(__file__))
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
 from fixed_downloader import connect_to_garmin, get_stats
 
 def main():

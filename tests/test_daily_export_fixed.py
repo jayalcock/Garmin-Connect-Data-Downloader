@@ -7,14 +7,18 @@ import unittest
 from unittest.mock import patch, MagicMock
 from pathlib import Path
 
-# Add parent directory to path to import the modules
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from src import daily_export
+# Robust import of daily_export
+import importlib.util
+
+daily_export_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'src', 'daily_export.py')
+spec = importlib.util.spec_from_file_location('daily_export', daily_export_path)
+daily_export = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(daily_export)
 
 # Helper function to get the correct module path for patching
+MODULE_PATH = 'daily_export'
 def get_module_path(name):
-    """Get the correct module path for patching"""
-    return f'src.daily_export.{name}'
+    return f'{MODULE_PATH}.{name}'
 
 class TestDailyExport(unittest.TestCase):
     """Tests for daily export script"""

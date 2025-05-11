@@ -11,16 +11,25 @@ import argparse
 import getpass
 from pathlib import Path
 
-# Add parent directory to Python path to import modules from src
-sys.path.append(str(Path(__file__).parent.parent))
-
 # Set environment variable to indicate we're in test mode
 os.environ['GARMIN_TEST_MODE'] = 'true'
+
+# Add main project directory and tests directory to sys.path for robust imports
+main_dir = str(Path(__file__).parent.parent)
+tests_dir_path = str(Path(__file__).parent)
+if main_dir not in sys.path:
+    sys.path.insert(0, main_dir)
+if tests_dir_path not in sys.path:
+    sys.path.insert(0, tests_dir_path)
+# Remove src from sys.path if present
+src_dir = os.path.join(main_dir, 'src')
+if src_dir in sys.path:
+    sys.path.remove(src_dir)
 
 def run_all_tests():
     """Run all tests in the tests directory"""
     # Get the tests directory path
-    tests_dir = Path(os.path.dirname(os.path.abspath(__file__)))
+    tests_dir = Path(tests_dir_path)
     
     # Discover all tests in the tests directory
     test_loader = unittest.TestLoader()
@@ -36,7 +45,7 @@ def run_all_tests():
 def run_specific_tests(test_name):
     """Run a specific test module"""
     # Get the tests directory path
-    tests_dir = Path(os.path.dirname(os.path.abspath(__file__)))
+    tests_dir = Path(tests_dir_path)
     
     # Add pattern prefix if needed
     if not test_name.startswith('test_'):

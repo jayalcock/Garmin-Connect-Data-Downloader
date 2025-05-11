@@ -7,15 +7,26 @@ import unittest
 from unittest.mock import patch, MagicMock
 import datetime as dt
 from pathlib import Path
+import importlib.util
 
 # Add parent directory to path to import the src module
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from src.downloader import get_stats, export_to_csv
+fixed_downloader_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'fixed_downloader.py')
+spec = importlib.util.spec_from_file_location('fixed_downloader', fixed_downloader_path)
+fixed_downloader = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(fixed_downloader)
+get_stats = fixed_downloader.get_stats
+export_to_csv = fixed_downloader.export_to_csv
+
+# Helper for patching
+MODULE_PATH = 'fixed_downloader'
+def get_module_path(name):
+    return f'{MODULE_PATH}.{name}'
 
 class TestDataRetrieval(unittest.TestCase):
     """Tests for data retrieval functions"""
     
-    @patch('src.downloader.dt.date')
+    @patch('fixed_downloader.dt.date')
     def test_get_stats_default_date(self, mock_date):
         """Test get_stats using default date (today)"""
         # Setup
@@ -36,7 +47,7 @@ class TestDataRetrieval(unittest.TestCase):
         # Just verify it was called once, do not specify the exact argument
         mock_garmin.get_stats_and_body.assert_called_once()
     
-    @patch('src.downloader.dt.date')
+    @patch('fixed_downloader.dt.date')
     def test_get_stats_specific_date(self, mock_date):
         """Test get_stats using a specific date"""
         # Setup
@@ -56,9 +67,9 @@ class TestDataRetrieval(unittest.TestCase):
         mock_garmin.get_stats_and_body.assert_called_once_with('2025-05-08')
         self.assertEqual(result.get('steps'), 9000)
     
-    @patch('src.downloader.export_to_csv')
-    @patch('src.downloader.backup_data_file')
-    @patch('src.downloader.dt.date')
+    @patch('fixed_downloader.export_to_csv')
+    @patch('fixed_downloader.backup_data_file')
+    @patch('fixed_downloader.dt.date')
     def test_get_stats_with_export(self, mock_date, mock_backup, mock_export):
         """Test get_stats with export option enabled"""
         # Setup
