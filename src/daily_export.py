@@ -5,10 +5,11 @@ import os
 import sys
 import datetime
 
-# Add the parent directory to the path to find the downloader module
-sys.path.append("/Users/jay/Projects/Garmin Apps/Data download/src")
+# Add the parent directory to find the fixed_downloader module
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(parent_dir)
 
-from downloader import connect_to_garmin, get_stats
+from fixed_downloader import connect_to_garmin, get_stats
 
 def main():
     """Run the daily export"""

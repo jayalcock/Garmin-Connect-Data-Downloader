@@ -9,9 +9,12 @@ if [ -d "venv" ]; then
     source venv/bin/activate
 fi
 
-# Run the downloader script with the today's activities option
+# Run the fixed_downloader script with the today's activities option
 python3 -c "
-from src.downloader import connect_to_garmin, download_today_activities
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent))
+from fixed_downloader import connect_to_garmin, download_today_activities
 client = connect_to_garmin()
 if client:
     download_today_activities(client, 'TCX')

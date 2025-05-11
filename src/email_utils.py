@@ -5,7 +5,6 @@ import json
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Optional
-import time
 
 def get_latest_mfa_code_from_email() -> Optional[str]:
     """
@@ -20,8 +19,6 @@ def get_latest_mfa_code_from_email() -> Optional[str]:
         "subject": "Your Security Passcode"
     }
     """
-    # Wait 15 seconds to allow the MFA email to arrive
-    time.sleep(10)
     config_path = Path.home() / '.garmin_email_config.json'
     if not config_path.exists():
         print("No email config found at ~/.garmin_email_config.json")
@@ -57,12 +54,12 @@ def get_latest_mfa_code_from_email() -> Optional[str]:
         for part in parts:
             if part.get_content_type() != 'text/plain':
                 continue
-            payload = part.get_payload(decode=True)
+            payload = part.get_payload(decode=False)
             if not payload:
                 continue
-            try:
+            if isinstance(payload, bytes):
                 text = payload.decode('utf-8', errors='ignore')
-            except (AttributeError, UnicodeDecodeError):
+            else:
                 text = str(payload)
             body += text
         # Continue with code search and logout
