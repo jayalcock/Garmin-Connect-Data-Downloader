@@ -155,3 +155,6 @@ class TestExportFunctions(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+# ARCHIVED: This test referenced the old downloader.py, which is no longer used.
+# Please use fixed_downloader.py for any new tests.

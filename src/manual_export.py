@@ -6,29 +6,14 @@ import sys
 import datetime
 from pathlib import Path
 
-# Import handling for both direct execution and being imported
-# First, try to use fixed_downloader.py from the parent directory
+# Try import for both direct execution and as a module
 try:
-    # Add the parent directory to the path to find the fixed_downloader module
-    parent_dir = Path(__file__).parent.parent
-    sys.path.append(str(parent_dir))
-    import fixed_downloader
     from fixed_downloader import connect_to_garmin, get_stats
 except ImportError:
-    # Fall back to the original downloader if fixed_downloader is not available
-    try:
-        # When imported from run_manual_export.py
-        from src import downloader
-        from src.downloader import connect_to_garmin, get_stats
-    except ImportError:
-        try:
-            # When run directly or as a module in the src package
-            from . import downloader
-            from .downloader import connect_to_garmin, get_stats
-        except ImportError:
-            # Fallback for direct script execution
-            import downloader
-            from downloader import connect_to_garmin, get_stats
+    parent_dir = Path(__file__).parent.parent
+    sys.path.append(str(parent_dir))
+    from fixed_downloader import connect_to_garmin, get_stats
+
 
 def main():
     """Run manual Garmin data export"""
@@ -50,7 +35,7 @@ def main():
         print("\nData export complete! Files have been saved to:")
         export_dir = Path(__file__).parent / "exports"
         print(f"- Local directory: {export_dir}")
-        print(f"- Nextcloud directory: /Users/jay/Nextcloud/Garmin Health Data/")
+        print("- Nextcloud directory: /Users/jay/Nextcloud/Garmin Health Data/")
     else:
         print("Failed to connect to Garmin Connect")
         sys.exit(1)

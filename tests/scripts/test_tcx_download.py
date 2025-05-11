@@ -1,7 +1,14 @@
 #!/usr/bin/env python3
 # Test TCX download functionality
 
-from src.downloader import connect_to_garmin, download_activity_file
+import importlib.util
+import os
+fixed_downloader_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'fixed_downloader.py')
+spec = importlib.util.spec_from_file_location('fixed_downloader', fixed_downloader_path)
+fixed_downloader = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(fixed_downloader)
+connect_to_garmin = fixed_downloader.connect_to_garmin
+download_activity_file = fixed_downloader.download_activity_file
 
 def test_tcx_download():
     """Test downloading a TCX file with the fixed filename generation"""

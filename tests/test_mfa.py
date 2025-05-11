@@ -15,6 +15,9 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from src.downloader import connect_to_garmin
 
+# ARCHIVED: This test referenced the old downloader.py, which is no longer used.
+# Please use fixed_downloader.py for any new tests.
+
 def test_mfa_auth():
     """Test different authentication methods with Garmin Connect"""
     print("=" * 60)
