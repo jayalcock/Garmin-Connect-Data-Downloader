@@ -21,11 +21,11 @@ def main():
     if client:
         # Get yesterday's data (more likely to be complete than today's)
         yesterday = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
-        get_stats(client, yesterday, export=True)
+        get_stats(client, yesterday, export=True, interactive=False)
         
         # Also get today's data
         today = datetime.date.today().isoformat()
-        get_stats(client, today, export=True)
+        get_stats(client, today, export=True, interactive=False)
     else:
         print("Failed to connect to Garmin Connect")
         sys.exit(1)

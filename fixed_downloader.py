@@ -304,8 +304,10 @@ def export_to_csv(stats: Dict[str, Any], date_str: str, export_dir: Path) -> Pat
     
     # For consistency, we'll overwrite the file if it exists but has different columns
     # This ensures that changes to our data structure don't result in misaligned columns
-    # We also check for duplicate entries by date to avoid adding the same date twice
+    # If a date already exists in the file, we'll replace that entry with new data
     duplicate_entry = False
+    existing_data = []
+    
     if file_exists:
         with open(csv_file, 'r', newline='', encoding='utf-8') as f:
             reader = csv.reader(f)
@@ -315,24 +317,28 @@ def export_to_csv(stats: Dict[str, Any], date_str: str, export_dir: Path) -> Pat
                     # Headers don't match, overwrite the file
                     file_exists = False
                 else:
-                    # Check if this date already exists in the file
+                    # Read all rows and check if our date exists
                     for row in reader:
                         if row and row[0] == date_str:  # First column should be date
                             duplicate_entry = True
-                            break
+                            # Skip this row (we'll add the updated version)
+                            continue
+                        # Keep all other rows
+                        existing_data.append(row)
             except StopIteration:
                 # File is empty
                 file_exists = False
     
-    mode = 'a' if file_exists else 'w'
-    
-    # Only write if this is a new date or we're creating a new file
-    if not duplicate_entry:
-        with open(csv_file, mode, newline='', encoding='utf-8') as f:
-            writer = csv.DictWriter(f, fieldnames=all_fields)
-            if not file_exists:
-                writer.writeheader()
-            writer.writerow(row_data)
+    # Write to the file with either all existing data + new row or just create new file
+    with open(csv_file, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        # Write header
+        writer.writerow(all_fields)
+        # Write all existing rows (except the one we're replacing)
+        for row in existing_data:
+            writer.writerow(row)
+        # Write our new/updated row
+        writer.writerow([row_data.get(field, '') for field in all_fields])
     
     # Also create a dated archive copy for backup
     archive_dir = export_dir / "archive"
@@ -381,13 +387,14 @@ def backup_data_file(file_path: Path) -> bool:
         print(f"Error copying to Nextcloud: {e}")
         return False
 
-def get_stats(garmin_client: Optional[Garmin], date_str: Optional[str] = None, export: bool = False) -> Optional[Dict[str, Any]]:
+def get_stats(garmin_client: Optional[Garmin], date_str: Optional[str] = None, export: bool = False, interactive: bool = True) -> Optional[Dict[str, Any]]:
     """Get activity statistics from Garmin Connect for a specific date
     
     Args:
         garmin_client: The Garmin Connect client
         date_str: The date in ISO format (YYYY-MM-DD), or None for today
         export: Whether to export the data to CSV
+        interactive: Whether to allow interactive prompts during execution
         
     Returns:
         The stats dictionary if successful, None otherwise
@@ -513,8 +520,8 @@ def get_stats(garmin_client: Optional[Garmin], date_str: Optional[str] = None, e
             csv_path = export_to_csv(stats, date_str, export_dir)
             backup_data_file(csv_path)
         
-        # Ask if user wants to see all data
-        if input("\nShow all available data? (y/n): ").strip().lower() == 'y':
+        # Ask if user wants to see all data (only in interactive mode)
+        if interactive and input("\nShow all available data? (y/n): ").strip().lower() == 'y':
             print("\n===== All Available Data =====")
             for key, value in sorted(stats.items()):
                 print(f"{key}: {value}")
