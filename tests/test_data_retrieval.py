@@ -37,8 +37,9 @@ class TestDataRetrieval(unittest.TestCase):
         mock_garmin = MagicMock()
         mock_garmin.get_stats_and_body.return_value = {'steps': 10000}
         
-        # Call function
-        result = get_stats(mock_garmin, interactive=False)
+        # Call function with patched sys.stdin.isatty to avoid interactive prompts
+        with patch('sys.stdin.isatty', return_value=False):
+            result = get_stats(mock_garmin)
         
         # Verify
         self.assertIsNotNone(result)
@@ -57,8 +58,9 @@ class TestDataRetrieval(unittest.TestCase):
         mock_garmin = MagicMock()
         mock_garmin.get_stats_and_body.return_value = {'steps': 9000}
         
-        # Call function
-        result = get_stats(mock_garmin, '2025-05-08', interactive=False)
+        # Call function with patched sys.stdin.isatty to avoid interactive prompts
+        with patch('sys.stdin.isatty', return_value=False):
+            result = get_stats(mock_garmin, '2025-05-08')
         
         # Verify
         self.assertIsNotNone(result)
@@ -66,36 +68,64 @@ class TestDataRetrieval(unittest.TestCase):
         mock_garmin.get_stats_and_body.assert_called_once_with('2025-05-08')
         self.assertEqual(result.get('steps'), 9000)
     
-    @patch('json.dump')
-    @patch('fixed_downloader.export_to_csv')
-    @patch('fixed_downloader.backup_data_file')
-    @patch('fixed_downloader.dt.date')
-    def test_get_stats_with_export(self, mock_json_dump, mock_export, mock_backup, mock_date):
+    def test_get_stats_with_export(self):
         """Test get_stats with export option enabled"""
-        # Setup
-        mock_date_obj = MagicMock()
-        mock_date_obj.isoformat.return_value = '2025-05-09'
-        mock_date.today.return_value = mock_date_obj
-        mock_date.fromisoformat.return_value = mock_date_obj
+        # This approach modifies the function under test to bypass the export 
+        # and backup functionality while still testing the main workflow
+
+        # Store the original function to restore it later
+        original_export = fixed_downloader.export_to_csv
+        original_backup = fixed_downloader.backup_data_file
         
-        mock_garmin = MagicMock()
-        mock_garmin.get_stats_and_body.return_value = {'steps': 10000}
-        
-        # Configure the mock for export
-        mock_export.return_value = Path('/test/exports/garmin_stats.csv')
-        
-        # Call function
-        result = get_stats(mock_garmin, export=True, interactive=False)
-        
-        # Verify
-        self.assertIsNotNone(result)
-        mock_export.assert_called_once()
-        mock_backup.assert_called_once_with(Path('/test/exports/garmin_stats.csv'))
+        try:
+            # Create mock versions of the functions
+            mock_export = MagicMock()
+            mock_export.return_value = Path('/test/exports/garmin_stats.csv')
+            
+            mock_backup = MagicMock()
+            mock_backup.return_value = True
+            
+            # Replace the original functions with our mocks
+            fixed_downloader.export_to_csv = mock_export
+            fixed_downloader.backup_data_file = mock_backup
+            
+            # Setup other necessary mocks
+            with patch('sys.stdin.isatty', return_value=False):  # Avoid prompts
+                with patch('fixed_downloader.dt.date') as mock_date:
+                    # Mock date functionality
+                    mock_date_obj = MagicMock()
+                    mock_date_obj.isoformat.return_value = '2025-05-09'
+                    mock_date_obj.weekday.return_value = 4  # Friday
+                    mock_date.today.return_value = mock_date_obj
+                    mock_date.fromisoformat.return_value = mock_date_obj
+                    
+                    # Create Garmin client mock
+                    mock_garmin = MagicMock()
+                    mock_garmin.get_stats_and_body.return_value = {'steps': 10000}
+                    mock_garmin.get_hrv_data.return_value = {}  # Empty dict to prevent exceptions
+                    
+                    # Mock file operations to prevent writing to disk
+                    with patch('pathlib.Path.mkdir'):
+                        with patch('builtins.open', unittest.mock.mock_open()):
+                            with patch('json.dump'):
+                                # Call function with export=True
+                                result = get_stats(mock_garmin, export=True)
+                                
+                                # Verify the result is not None
+                                self.assertIsNotNone(result)
+                                # Verify export was called
+                                mock_export.assert_called_once()
+                                # Verify backup was called with the correct path
+                                mock_backup.assert_called_once_with(Path('/test/exports/garmin_stats.csv'))
+        finally:
+            # Restore the original functions
+            fixed_downloader.export_to_csv = original_export
+            fixed_downloader.backup_data_file = original_backup
     
     def test_get_stats_none_client(self):
         """Test get_stats with None client"""
         # Call function
-        result = get_stats(None, interactive=False)
+        result = get_stats(None)
         
         # Verify
         self.assertIsNone(result)
