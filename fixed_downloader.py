@@ -221,7 +221,7 @@ def export_to_csv(stats: Dict[str, Any], date_str: str, export_dir: Path) -> Pat
     ]
     
     base_fields = [
-        'steps', 'totalDistanceMeters', 'totalKilocalories', 
+        'totalDistanceMeters', 'totalKilocalories', 
         'activeKilocalories', 'bmrKilocalories', 'restingHeartRate', 'maxHeartRate',
         'minHeartRate', 'lastSevenDaysAvgRestingHeartRate', 'totalSteps', 
         'dailyStepGoal', 'floorsAscended', 'floorsDescended'
@@ -467,7 +467,7 @@ def get_stats(garmin_client: Optional[Garmin], date_str: Optional[str] = None, e
         
         # Display summary stats
         print(f"\n===== Summary for {date_str} =====")
-        print("Steps:", stats.get("steps", "unknown"))
+        print("Steps:", stats.get("totalSteps", "unknown"))
         print("Distance:", stats.get("totalDistanceMeters", "unknown"), "meters")
         print("Calories:", stats.get("totalKilocalories", "unknown"), "kcal")
         print("Active calories:", stats.get("activeKilocalories", "unknown"), "kcal")
