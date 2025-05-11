@@ -252,6 +252,12 @@ def export_to_csv(stats: Dict[str, Any], date_str: str, export_dir: Path) -> Pat
         'muscleMass', 'visceralFat', 'metabolicAge', 'physiqueRating'
     ]
     
+    # Alternative field names that might be used by the API
+    alternative_field_mappings = {
+        'weight': 'weightInGrams',
+        'bodyFat': 'bodyFatPercentage',
+    }
+    
     # Add respiration fields if available
     respiration_fields = [
         'avgWakingRespirationValue', 'latestRespirationValue', 
@@ -297,7 +303,20 @@ def export_to_csv(stats: Dict[str, Any], date_str: str, export_dir: Path) -> Pat
     # Convert stats to a row with all fields, using blank for missing data
     row_data = {}
     for field in all_fields:
-        row_data[field] = stats.get(field, '')
+        # Check if we have an alternative field name and use that if the primary field is missing
+        if field not in stats and field in alternative_field_mappings.values():
+            # Find the alternative field name
+            alt_fields = [k for k, v in alternative_field_mappings.items() if v == field]
+            for alt_field in alt_fields:
+                if alt_field in stats and stats[alt_field] is not None:
+                    row_data[field] = stats.get(alt_field)
+                    break
+            else:  # No alternative field found or it was empty
+                row_data[field] = ''
+        else:
+            # Ensure None values are stored as empty strings
+            value = stats.get(field)
+            row_data[field] = '' if value is None else value
     
     # Write to CSV
     file_exists = csv_file.exists() and os.path.getsize(csv_file) > 0
@@ -421,6 +440,21 @@ def get_stats(garmin_client: Optional[Garmin], date_str: Optional[str] = None, e
         # Get stats for the specified date
         stats = garmin_client.get_stats_and_body(date_str)
         
+        # Map field names from Garmin API to our expected format
+        field_mappings = {
+            'weight': 'weightInGrams',
+            'bodyFat': 'bodyFatPercentage',
+            'bodyWater': 'bodyWater',  # Same name, included for completeness
+            'boneMass': 'boneMass',    # Same name, included for completeness
+            'muscleMass': 'muscleMass' # Same name, included for completeness
+        }
+        
+        # Apply field mappings
+        for api_field, our_field in field_mappings.items():
+            if api_field in stats and our_field not in stats:
+                stats[our_field] = stats[api_field]
+                print(f"Mapped {api_field} to {our_field}: {stats[our_field]}")
+        
         # Try to get HRV data separately
         try:
             print("Trying to fetch HRV data...")
@@ -504,11 +538,31 @@ def get_stats(garmin_client: Optional[Garmin], date_str: Optional[str] = None, e
             print(f"Awake Time: {stats.get('awakeSleepSeconds', 0) / 3600:.2f} hours")
         
         # Body stats if available
-        if "weightInGrams" in stats:
+        # Check if we have any body stats data
+        has_body_stats = any(key in stats for key in ('weightInGrams', 'weight', 'bmi', 'bodyFatPercentage', 'bodyFat'))
+        if has_body_stats:
             print("\n===== Body Stats =====")
-            print(f"Weight: {stats.get('weightInGrams', 0) / 1000:.2f} kg")
-            print(f"BMI: {stats.get('bmi', 'unknown')}")
-            print(f"Body Fat: {stats.get('bodyFatPercentage', 'unknown')}%")
+            
+            # Get weight value checking both field names and ensure it's a number
+            weight_value = stats.get('weightInGrams', stats.get('weight'))
+            if weight_value is not None:
+                print(f"Weight: {weight_value / 1000:.2f} kg")
+            else:
+                print("Weight: Not available")
+                
+            # Display BMI if available
+            bmi = stats.get('bmi')
+            if bmi is not None:
+                print(f"BMI: {bmi}")
+            else:
+                print("BMI: Not available")
+            
+            # Check for body fat with either field name
+            body_fat = stats.get('bodyFatPercentage', stats.get('bodyFat'))
+            if body_fat is not None:
+                print(f"Body Fat: {body_fat}%")
+            else:
+                print("Body Fat: Not available")
         
         # Export data if requested
         if export:
