@@ -64,32 +64,9 @@ def decrypt_password(encrypted: str) -> Optional[str]:
         return None
 
 def get_mfa_code():
-    """Get MFA code, first trying email, otherwise prompt user"""
-    # Try to import email_utils from the same directory as this file
-    try:
-        from .email_utils import get_latest_mfa_code_from_email
-    except (ImportError, SystemError):
-        # Fallback: add src directory to sys.path and import
-        import sys as sys_mod
-        import os as os_mod  # Avoid shadowing the global os
-        src_dir = os_mod.path.dirname(os_mod.path.abspath(__file__))
-        if src_dir not in sys_mod.path:
-            sys_mod.path.insert(0, src_dir)
-        try:
-            from email_utils import get_latest_mfa_code_from_email
-        except ImportError:
-            # If still can't import, use a dummy function
-            def get_latest_mfa_code_from_email():
-                return None
-    
-    print("Fetching MFA code from email...")
-    code = get_latest_mfa_code_from_email()
-    if code:
-        print(f"Auto-filled MFA code: {code}")
-        return code
-    else:
-        print("Could not fetch MFA code from email, please enter manually.")
-        return input("MFA one-time code: ")
+    """Prompt user for MFA code"""
+    print("Multi-Factor Authentication required.")
+    return input("MFA one-time code: ")
 
 def connect_to_garmin(non_interactive: bool = False, allow_mfa: bool = True) -> Optional[Garmin]:
     """Connect to Garmin account with login
