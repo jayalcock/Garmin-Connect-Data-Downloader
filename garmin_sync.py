@@ -256,6 +256,11 @@ def export_to_csv(stats: Dict[str, Any], date_str: str, export_dir: Path) -> Pat
     alternative_field_mappings = {
         'weight': 'weightInGrams',
         'bodyFat': 'bodyFatPercentage',
+        'sleepingSeconds': 'sleepTimeSeconds', # Only map if sleepTimeSeconds doesn't exist
+        'deepSleepDuration': 'deepSleepSeconds',
+        'lightSleepDuration': 'lightSleepSeconds',
+        'remSleepDuration': 'remSleepSeconds',
+        'awakeDuration': 'awakeSleepSeconds',
     }
     
     # Add respiration fields if available
@@ -486,6 +491,30 @@ def get_stats(garmin_client: Optional[Garmin], date_str: Optional[str] = None, e
                 print("No HRV data available for this date.")
         except Exception as e:
             print(f"Error fetching HRV data: {e}")
+            
+        # Try to get detailed sleep data separately
+        try:
+            print("Trying to fetch detailed sleep data...")
+            sleep_data = get_sleep_data(garmin_client, date_str)
+            if sleep_data:
+                print("Sleep data found!")
+                # Update stats with sleep data
+                stats.update(sleep_data)
+            else:
+                print("No detailed sleep data available for this date.")
+                
+            # If we don't have detailed sleep stages, try to get them specifically
+            if not any(key in stats for key in ['deepSleepSeconds', 'lightSleepSeconds']):
+                print("Trying to fetch specialized sleep stages data...")
+                sleep_stages = get_sleep_stages(garmin_client, date_str)
+                if sleep_stages:
+                    print("Sleep stages data found!")
+                    # Update stats with sleep stages
+                    stats.update(sleep_stages)
+                else:
+                    print("No specialized sleep stages available for this date.")
+        except Exception as e:
+            print(f"Error fetching sleep data: {e}")
         
         # Add date information to the stats dictionary
         stats['date'] = date_str
@@ -528,14 +557,41 @@ def get_stats(garmin_client: Optional[Garmin], date_str: Optional[str] = None, e
             # Here you could add a call to a dedicated HRV function if you have one
         
         # Sleep data if available
-        if "sleepTimeSeconds" in stats:
-            sleep_hours = stats.get("sleepTimeSeconds", 0) / 3600
+        has_sleep_data = any(key in stats for key in ('sleepTimeSeconds', 'sleepingSeconds', 
+                                                    'deepSleepSeconds', 'lightSleepSeconds',
+                                                    'remSleepSeconds', 'awakeSleepSeconds'))
+        if has_sleep_data:
+            # Get total sleep time (may be under different field names)
+            sleep_time_seconds = stats.get("sleepTimeSeconds", stats.get("sleepingSeconds", 0))
+            sleep_hours = sleep_time_seconds / 3600 if sleep_time_seconds else 0
+            
             print("\n===== Sleep =====")
             print(f"Sleep Duration: {sleep_hours:.2f} hours")
-            print(f"Deep Sleep: {stats.get('deepSleepSeconds', 0) / 3600:.2f} hours")
-            print(f"Light Sleep: {stats.get('lightSleepSeconds', 0) / 3600:.2f} hours")
-            print(f"REM Sleep: {stats.get('remSleepSeconds', 0) / 3600:.2f} hours")
-            print(f"Awake Time: {stats.get('awakeSleepSeconds', 0) / 3600:.2f} hours")
+            
+            # Track which sleep stage data is available
+            available_stages = []
+            for stage, label in [
+                ('deepSleepSeconds', 'Deep Sleep'), 
+                ('lightSleepSeconds', 'Light Sleep'),
+                ('remSleepSeconds', 'REM Sleep'),
+                ('awakeSleepSeconds', 'Awake Time')
+            ]:
+                if stage in stats and stats[stage] is not None:
+                    available_stages.append(stage)
+                    hours = stats[stage] / 3600
+                    print(f"{label}: {hours:.2f} hours")
+            
+            if not available_stages:
+                print("Detailed sleep stages not available")
+            elif len(available_stages) < 4:
+                print("Note: Some sleep stages data is missing")
+                
+            # Show sleep start/end times if available
+            if 'sleepStartTimestampLocal' in stats and stats['sleepStartTimestampLocal']:
+                print(f"Sleep Start: {stats['sleepStartTimestampLocal']}")
+            if 'sleepEndTimestampLocal' in stats and stats['sleepEndTimestampLocal']:
+                print(f"Sleep End: {stats['sleepEndTimestampLocal']}")
+                print("Detailed sleep stages not available")
         
         # Body stats if available
         # Check if we have any body stats data
@@ -1020,6 +1076,320 @@ def get_hrv_data(garmin_client: Optional[Garmin], date_str: Optional[str] = None
         traceback.print_exc()
         return None
 
+def get_sleep_data(garmin_client: Optional[Garmin], date_str: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """Get detailed sleep data from Garmin Connect for a specific date
+    
+    Args:
+        garmin_client: The Garmin Connect client
+        date_str: The date in ISO format (YYYY-MM-DD), or None for today
+        
+    Returns:
+        The sleep data dictionary if successful, None otherwise
+    """
+    if not garmin_client:
+        return None
+    
+    try:
+        # Use today's date if none provided
+        if date_str is None:
+            date_obj = dt.date.today()
+            date_str = date_obj.isoformat()
+        else:
+            # Validate date format
+            try:
+                date_obj = dt.date.fromisoformat(date_str)
+                date_str = date_obj.isoformat()  # Normalize the format
+            except ValueError:
+                print(f"Invalid date format: {date_str}. Please use YYYY-MM-DD format.")
+                return None
+            
+        print(f"Getting sleep data for {date_str}...")
+        
+        # Try multiple API endpoints to get the most complete sleep data
+        # First try the standard sleep data endpoint
+        sleep_data = garmin_client.get_sleep_data(date_str)
+        
+        # If we don't have detailed sleep stages, try the detailed sleep endpoint
+        if sleep_data and not any(key in sleep_data for key in ['sleepLevels', 'deepSleepSeconds', 'lightSleepSeconds']):
+            try:
+                print("Getting additional detailed sleep data...")
+                detailed_sleep = None
+                # Check if other sleep data methods are available in the Garmin client
+                if hasattr(garmin_client, 'get_sleep_data_detailed'):
+                    detailed_sleep = garmin_client.get_sleep_data_detailed(date_str)
+                    print("Got detailed sleep data")
+                
+                # If we got detailed data, merge it with our existing data
+                if detailed_sleep:
+                    # Keep original sleep data as a base, but add any missing fields from detailed data
+                    for key, value in detailed_sleep.items():
+                        if key not in sleep_data or sleep_data[key] is None:
+                            sleep_data[key] = value
+                    print("Merged detailed sleep data")
+            except Exception as e:
+                print(f"Error getting detailed sleep data: {e}")
+                # Continue with what we have
+        
+        if sleep_data:
+            # Extract the sleep data we need
+            sleep_stats = {}
+            
+            # Basic sleep duration
+            if 'sleepTimeSeconds' in sleep_data:
+                sleep_stats['sleepTimeSeconds'] = sleep_data.get('sleepTimeSeconds')
+            elif 'sleepingSeconds' in sleep_data:
+                sleep_stats['sleepTimeSeconds'] = sleep_data.get('sleepingSeconds')
+            else:
+                # Try to calculate from timestamps
+                if 'sleepStartTimestampGMT' in sleep_data and 'sleepEndTimestampGMT' in sleep_data:
+                    try:
+                        start_time = sleep_data['sleepStartTimestampGMT'].split('.')[0]
+                        end_time = sleep_data['sleepEndTimestampGMT'].split('.')[0]
+                        start_dt = dt.datetime.strptime(start_time, '%Y-%m-%dT%H:%M:%S')
+                        end_dt = dt.datetime.strptime(end_time, '%Y-%m-%dT%H:%M:%S')
+                        sleep_stats['sleepTimeSeconds'] = int((end_dt - start_dt).total_seconds())
+                    except:
+                        pass
+            
+            # Always copy over sleeping seconds if available (common in Garmin data)
+            if 'sleepingSeconds' in sleep_data:
+                sleep_stats['sleepingSeconds'] = sleep_data.get('sleepingSeconds')
+            
+            # Store sleep start/end times
+            sleep_stats['sleepStartTimestampLocal'] = sleep_data.get('sleepStartTimestampLocal')
+            sleep_stats['sleepEndTimestampLocal'] = sleep_data.get('sleepEndTimestampLocal')
+
+            # Extract sleep stages if available
+            # Check for multiple data formats that Garmin API might return
+            
+            # Format 1: Check dailySleepDTO which often contains the most complete sleep data
+            if 'dailySleepDTO' in sleep_data and isinstance(sleep_data['dailySleepDTO'], dict):
+                daily_sleep = sleep_data['dailySleepDTO']
+                daily_sleep_fields = {
+                    'deepSleepSeconds': 'deepSleepSeconds',
+                    'lightSleepSeconds': 'lightSleepSeconds',
+                    'remSleepSeconds': 'remSleepSeconds',
+                    'awakeSleepSeconds': 'awakeSleepSeconds',
+                    'sleepTimeSeconds': 'sleepTimeSeconds'
+                }
+                
+                for field in daily_sleep_fields:
+                    if field in daily_sleep and daily_sleep[field] is not None:
+                        sleep_stats[field] = daily_sleep[field]
+                        print(f"Found sleep data in dailySleepDTO: {field} = {daily_sleep[field]}")
+            
+            # Format 2: Direct fields in the main sleep data
+            direct_fields = {
+                'deepSleepDuration': 'deepSleepSeconds',
+                'lightSleepDuration': 'lightSleepSeconds',
+                'remSleepDuration': 'remSleepSeconds',
+                'awakeDuration': 'awakeSleepSeconds',
+                'deepSleepSeconds': 'deepSleepSeconds',
+                'lightSleepSeconds': 'lightSleepSeconds',
+                'remSleepSeconds': 'remSleepSeconds',
+                'awakeSleepSeconds': 'awakeSleepSeconds'
+            }
+            
+            for src_field, dst_field in direct_fields.items():
+                if src_field in sleep_data and sleep_data[src_field] is not None:
+                    # Only update if we don't already have this data from dailySleepDTO
+                    if dst_field not in sleep_stats or sleep_stats[dst_field] is None:
+                        sleep_stats[dst_field] = sleep_data[src_field]
+                        print(f"Found sleep stage data: {dst_field} = {sleep_data[src_field]}")
+            
+            # Format 2: Sleep levels as a dictionary
+            if 'sleepLevels' in sleep_data and isinstance(sleep_data['sleepLevels'], dict):
+                sleep_levels = sleep_data['sleepLevels']
+                # Map fields
+                sleep_stages_map = {
+                    'deep': 'deepSleepSeconds',
+                    'light': 'lightSleepSeconds',
+                    'rem': 'remSleepSeconds',
+                    'awake': 'awakeSleepSeconds'
+                }
+                
+                for src_name, dst_field in sleep_stages_map.items():
+                    if src_name in sleep_levels and sleep_levels[src_name] is not None:
+                        sleep_stats[dst_field] = sleep_levels[src_name]
+                        print(f"Found sleep level data: {dst_field} = {sleep_levels[src_name]}")
+            
+            # Format 3: Sleep levels as a list
+            if 'sleepLevels' in sleep_data and isinstance(sleep_data['sleepLevels'], list):
+                total_by_level = {'deep': 0, 'light': 0, 'rem': 0, 'awake': 0}
+                
+                for level_data in sleep_data['sleepLevels']:
+                    if isinstance(level_data, dict):
+                        # Check different field formats that might contain level information
+                        level_name = None
+                        duration = None
+                        
+                        # Check 'level' field
+                        if 'level' in level_data:
+                            level_name = level_data.get('level', '').lower()
+                            duration = level_data.get('seconds', 0)
+                        
+                        # Check 'sleepLevel' field 
+                        elif 'sleepLevel' in level_data:
+                            level_name = level_data.get('sleepLevel', '').lower()
+                            duration = level_data.get('duration', 0)
+                        
+                        # Process if we found valid data
+                        if level_name in total_by_level and duration:
+                            total_by_level[level_name] += duration
+                
+                # Map the totals back to our standard field names
+                if total_by_level['deep'] > 0:
+                    sleep_stats['deepSleepSeconds'] = total_by_level['deep']
+                if total_by_level['light'] > 0:
+                    sleep_stats['lightSleepSeconds'] = total_by_level['light']
+                if total_by_level['rem'] > 0:
+                    sleep_stats['remSleepSeconds'] = total_by_level['rem']
+                if total_by_level['awake'] > 0:
+                    sleep_stats['awakeSleepSeconds'] = total_by_level['awake']
+                    
+                if any(v > 0 for v in total_by_level.values()):
+                    print(f"Calculated sleep stage totals: {total_by_level}")
+                    
+            # Format 4: Check in sleepSegments
+            if 'sleepSegments' in sleep_data and isinstance(sleep_data['sleepSegments'], list):
+                for segment in sleep_data['sleepSegments']:
+                    if isinstance(segment, dict) and 'sleepSegmentType' in segment:
+                        segment_type = segment.get('sleepSegmentType', '').lower()
+                        duration = segment.get('durationInSeconds', 0)
+                        
+                        if segment_type == 'deep' and duration > 0:
+                            sleep_stats['deepSleepSeconds'] = duration
+                        elif segment_type == 'light' and duration > 0:
+                            sleep_stats['lightSleepSeconds'] = duration
+                        elif segment_type == 'rem' and duration > 0:
+                            sleep_stats['remSleepSeconds'] = duration
+                        elif segment_type == 'awake' and duration > 0:
+                            sleep_stats['awakeSleepSeconds'] = duration
+            
+            # Try to find alternate field names that might contain the data
+            alt_fields = {
+                'deepSleepDuration': 'deepSleepSeconds',
+                'lightSleepDuration': 'lightSleepSeconds',
+                'remSleepDuration': 'remSleepSeconds',
+                'awakeDuration': 'awakeSleepSeconds',
+                'deepSleep': 'deepSleepSeconds',
+                'lightSleep': 'lightSleepSeconds',
+                'remSleep': 'remSleepSeconds',
+                'awake': 'awakeSleepSeconds'
+            }
+            for alt_field, expected_field in alt_fields.items():
+                if alt_field in sleep_data and expected_field not in sleep_stats:
+                    sleep_stats[expected_field] = sleep_data[alt_field]
+            
+            # Debug
+            if sleep_stats.get('sleepTimeSeconds'):
+                print("\n===== Sleep Data Summary =====")
+                sleep_hours = sleep_stats.get('sleepTimeSeconds', 0) / 3600
+                print(f"Sleep Duration: {sleep_hours:.2f} hours")
+                print(f"Deep Sleep: {sleep_stats.get('deepSleepSeconds', 0) / 3600:.2f} hours")
+                print(f"Light Sleep: {sleep_stats.get('lightSleepSeconds', 0) / 3600:.2f} hours")
+                print(f"REM Sleep: {sleep_stats.get('remSleepSeconds', 0) / 3600:.2f} hours")
+                print(f"Awake Time: {sleep_stats.get('awakeSleepSeconds', 0) / 3600:.2f} hours")
+            
+            return sleep_stats
+        else:
+            print("No sleep data available for this date.")
+            return {}
+            
+    except (ConnectionError, TimeoutError) as e:
+        print(f"Connection error while getting sleep data: {e}")
+        return None
+    except ValueError as e:
+        print(f"Value error while getting sleep data: {e}")
+        return None
+    except Exception as e:
+        print(f"Error getting sleep data: {e}")
+        traceback.print_exc()
+        return None
+
+def get_sleep_stages(garmin_client: Optional[Garmin], date_str: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """Get detailed sleep stages data from Garmin Connect
+    
+    This is a specialized function to directly access sleep stages using raw API endpoints
+    if the standard methods don't provide the data we need.
+    
+    Args:
+        garmin_client: The Garmin Connect client
+        date_str: The date in ISO format (YYYY-MM-DD), or None for today
+        
+    Returns:
+        Dictionary with sleep stages data if successful, None otherwise
+    """
+    if not garmin_client:
+        return None
+        
+    try:
+        # Use today's date if none provided
+        if date_str is None:
+            date_obj = dt.date.today()
+            date_str = date_obj.isoformat()
+        else:
+            # Validate date format
+            try:
+                date_obj = dt.date.fromisoformat(date_str)
+                date_str = date_obj.isoformat()  # Normalize the format
+            except ValueError:
+                print(f"Invalid date format: {date_str}. Please use YYYY-MM-DD format.")
+                return None
+        
+        print(f"Getting detailed sleep stages for {date_str}...")
+        
+        # Try the standard sleep data call first
+        sleep_data = garmin_client.get_sleep_data(date_str)
+        
+        # Initialize sleep stages dictionary
+        sleep_stages = {
+            'deepSleepSeconds': None,
+            'lightSleepSeconds': None,
+            'remSleepSeconds': None,
+            'awakeSleepSeconds': None
+        }
+        
+        # Check if we have sleep data and try to extract sleep stages
+        if sleep_data:
+            # Try to access the Garmin Connect client's session for direct API calls
+            if hasattr(garmin_client, 'session'):
+                # Try to access more detailed sleep data endpoint
+                try:
+                    # URL for detailed sleep data (may vary by API version)
+                    url = f"https://connect.garmin.com/modern/proxy/wellness-service/wellness/dailySleepData/{garmin_client.display_name}"
+                    params = {'date': date_str}
+                    
+                    response = garmin_client.session.get(url, params=params)
+                    if response.status_code == 200:
+                        detailed_data = response.json()
+                        
+                        # Try to extract sleep stages from the response
+                        if 'sleepPhases' in detailed_data:
+                            phases = detailed_data['sleepPhases']
+                            for phase in phases:
+                                if phase.get('type') == 'DEEP':
+                                    sleep_stages['deepSleepSeconds'] = phase.get('durationInSeconds', 0)
+                                elif phase.get('type') == 'LIGHT':
+                                    sleep_stages['lightSleepSeconds'] = phase.get('durationInSeconds', 0)
+                                elif phase.get('type') == 'REM':
+                                    sleep_stages['remSleepSeconds'] = phase.get('durationInSeconds', 0)
+                                elif phase.get('type') == 'AWAKE':
+                                    sleep_stages['awakeSleepSeconds'] = phase.get('durationInSeconds', 0)
+                            
+                            print("Successfully retrieved detailed sleep stages")
+                            return sleep_stages
+                except Exception as e:
+                    print(f"Error accessing detailed sleep endpoint: {e}")
+        
+        # If we reach here, we couldn't get the detailed data through direct API access
+        # Return None to indicate we couldn't get detailed sleep stages
+        return None
+        
+    except Exception as e:
+        print(f"Error getting sleep stages: {e}")
+        return None
+
 def show_menu(garmin_client: Optional[Garmin]) -> None:
     """Show menu of options for Garmin Connect data retrieval"""
     if not garmin_client:
@@ -1035,9 +1405,11 @@ def show_menu(garmin_client: Optional[Garmin]) -> None:
         print("5. Setup daily automatic export to Nextcloud")
         print("6. Download an activity file")
         print("7. Download today's activities automatically")
-        print("8. Exit")
+        print("8. Get HRV data for a specific date")
+        print("9. Get sleep data for a specific date")
+        print("10. Exit")
         
-        choice = input("\nEnter your choice (1-8): ").strip()
+        choice = input("\nEnter your choice (1-10): ").strip()
         
         if choice == "1":
             get_stats(garmin_client)
@@ -1066,10 +1438,16 @@ def show_menu(garmin_client: Optional[Garmin]) -> None:
                 format_type = "TCX"  # Set default format to TCX
             download_today_activities(garmin_client, format_type)
         elif choice == "8":
+            date_str = input("Enter date (YYYY-MM-DD): ").strip()
+            get_hrv_data(garmin_client, date_str)
+        elif choice == "9":
+            date_str = input("Enter date (YYYY-MM-DD): ").strip()
+            get_sleep_data(garmin_client, date_str)
+        elif choice == "10":
             print("Goodbye!")
             break
         else:
-            print("Invalid choice. Please select 1-8.")
+            print("Invalid choice. Please select 1-10.")
 
 if __name__ == "__main__":
     client = connect_to_garmin()
