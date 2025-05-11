@@ -974,10 +974,9 @@ def show_menu(garmin_client: Optional[Garmin]) -> None:
         print("5. Setup daily automatic export to Nextcloud")
         print("6. Download an activity file")
         print("7. Download today's activities automatically")
-        print("8. Get HRV data")
-        print("9. Exit")
+        print("8. Exit")
         
-        choice = input("\nEnter your choice (1-9): ").strip()
+        choice = input("\nEnter your choice (1-8): ").strip()
         
         if choice == "1":
             get_stats(garmin_client)
@@ -1006,14 +1005,10 @@ def show_menu(garmin_client: Optional[Garmin]) -> None:
                 format_type = "TCX"  # Set default format to TCX
             download_today_activities(garmin_client, format_type)
         elif choice == "8":
-            date_input = input("Enter date (YYYY-MM-DD) or leave blank for today: ").strip()
-            date_str = date_input if date_input else None
-            get_hrv_data(garmin_client, date_str)
-        elif choice == "9":
             print("Goodbye!")
             break
         else:
-            print("Invalid choice. Please select 1-9.")
+            print("Invalid choice. Please select 1-8.")
 
 if __name__ == "__main__":
     client = connect_to_garmin()
