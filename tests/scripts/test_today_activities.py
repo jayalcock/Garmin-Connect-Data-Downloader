@@ -11,12 +11,12 @@ parent_dir = os.path.abspath(os.path.dirname(__file__))
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
-fixed_downloader_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'fixed_downloader.py')
-spec = importlib.util.spec_from_file_location('fixed_downloader', fixed_downloader_path)
-fixed_downloader = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(fixed_downloader)
-connect_to_garmin = fixed_downloader.connect_to_garmin
-download_today_activities = fixed_downloader.download_today_activities
+garmin_sync_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'garmin_sync.py')
+spec = importlib.util.spec_from_file_location('garmin_sync', garmin_sync_path)
+garmin_sync = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(garmin_sync)
+connect_to_garmin = garmin_sync.connect_to_garmin
+download_today_activities = garmin_sync.download_today_activities
 
 def main():
     """Test the download today's activities functionality"""

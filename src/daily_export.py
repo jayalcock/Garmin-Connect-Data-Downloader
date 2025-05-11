@@ -5,11 +5,11 @@ import os
 import sys
 import datetime
 
-# Add the parent directory to find the fixed_downloader module
+# Add the parent directory to find the garmin_sync module
 parent_dir = os.path.dirname(os.path.abspath(__file__))
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
-from fixed_downloader import connect_to_garmin, get_stats
+from garmin_sync import connect_to_garmin, get_stats
 
 def main():
     """Run the daily export"""

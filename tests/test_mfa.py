@@ -7,13 +7,13 @@ and whether app passwords or other methods might work.
 
 import os
 
-# Use fixed_downloader.py for MFA/auth tests
+# Use garmin_sync.py for MFA/auth tests
 import importlib.util
-fixed_downloader_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'fixed_downloader.py')
-spec = importlib.util.spec_from_file_location('fixed_downloader', fixed_downloader_path)
-fixed_downloader = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(fixed_downloader)
-connect_to_garmin = fixed_downloader.connect_to_garmin
+garmin_sync_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'garmin_sync.py')
+spec = importlib.util.spec_from_file_location('garmin_sync', garmin_sync_path)
+garmin_sync = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(garmin_sync)
+connect_to_garmin = garmin_sync.connect_to_garmin
 
 def test_mfa_auth():
     """Test different authentication methods with Garmin Connect"""

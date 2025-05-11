@@ -8,11 +8,11 @@ from pathlib import Path
 
 # Try import for both direct execution and as a module
 try:
-    from fixed_downloader import connect_to_garmin, get_stats
+    from garmin_sync import connect_to_garmin, get_stats
 except ImportError:
     parent_dir = Path(__file__).parent.parent
     sys.path.append(str(parent_dir))
-    from fixed_downloader import connect_to_garmin, get_stats
+    from garmin_sync import connect_to_garmin, get_stats
 
 
 def main():

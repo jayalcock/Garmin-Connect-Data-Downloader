@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # ARCHIVED: This test referenced the old downloader.py, which is no longer used.
-# Please use fixed_downloader.py for any new tests.
+# Please use garmin_sync.py for any new tests.
 
 # import os
 # import sys

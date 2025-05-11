@@ -10,22 +10,22 @@ import importlib.util
 
 # Add parent directory to path to import the src module
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-fixed_downloader_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'fixed_downloader.py')
-spec = importlib.util.spec_from_file_location('fixed_downloader', fixed_downloader_path)
-fixed_downloader = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(fixed_downloader)
-get_stats = fixed_downloader.get_stats
-export_to_csv = fixed_downloader.export_to_csv
+garmin_sync_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'garmin_sync.py')
+spec = importlib.util.spec_from_file_location('garmin_sync', garmin_sync_path)
+garmin_sync = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(garmin_sync)
+get_stats = garmin_sync.get_stats
+export_to_csv = garmin_sync.export_to_csv
 
 # Helper for patching
-MODULE_PATH = 'fixed_downloader'
+MODULE_PATH = 'garmin_sync'
 def get_module_path(name):
     return f'{MODULE_PATH}.{name}'
 
 class TestDataRetrieval(unittest.TestCase):
     """Tests for data retrieval functions"""
     
-    @patch('fixed_downloader.dt.date')
+    @patch('garmin_sync.dt.date')
     def test_get_stats_default_date(self, mock_date):
         """Test get_stats using default date (today)"""
         # Setup
@@ -47,7 +47,7 @@ class TestDataRetrieval(unittest.TestCase):
         # Just verify it was called once, do not specify the exact argument
         mock_garmin.get_stats_and_body.assert_called_once()
     
-    @patch('fixed_downloader.dt.date')
+    @patch('garmin_sync.dt.date')
     def test_get_stats_specific_date(self, mock_date):
         """Test get_stats using a specific date"""
         # Setup
@@ -74,8 +74,8 @@ class TestDataRetrieval(unittest.TestCase):
         # and backup functionality while still testing the main workflow
 
         # Store the original function to restore it later
-        original_export = fixed_downloader.export_to_csv
-        original_backup = fixed_downloader.backup_data_file
+        original_export = garmin_sync.export_to_csv
+        original_backup = garmin_sync.backup_data_file
         
         try:
             # Create mock versions of the functions
@@ -86,12 +86,12 @@ class TestDataRetrieval(unittest.TestCase):
             mock_backup.return_value = True
             
             # Replace the original functions with our mocks
-            fixed_downloader.export_to_csv = mock_export
-            fixed_downloader.backup_data_file = mock_backup
+            garmin_sync.export_to_csv = mock_export
+            garmin_sync.backup_data_file = mock_backup
             
             # Setup other necessary mocks
             with patch('sys.stdin.isatty', return_value=False):  # Avoid prompts
-                with patch('fixed_downloader.dt.date') as mock_date:
+                with patch('garmin_sync.dt.date') as mock_date:
                     # Mock date functionality
                     mock_date_obj = MagicMock()
                     mock_date_obj.isoformat.return_value = '2025-05-09'
@@ -119,8 +119,8 @@ class TestDataRetrieval(unittest.TestCase):
                                 mock_backup.assert_called_once_with(Path('/test/exports/garmin_stats.csv'))
         finally:
             # Restore the original functions
-            fixed_downloader.export_to_csv = original_export
-            fixed_downloader.backup_data_file = original_backup
+            garmin_sync.export_to_csv = original_export
+            garmin_sync.backup_data_file = original_backup
     
     def test_get_stats_none_client(self):
         """Test get_stats with None client"""

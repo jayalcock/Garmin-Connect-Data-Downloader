@@ -9,7 +9,7 @@ if [ -d "venv" ]; then
     source venv/bin/activate
 fi
 
-# Run the fixed_downloader script with the today's activities option
+# Run the garmin_sync script with the today's activities option
 python3 -c "
 import sys
 import os
@@ -17,7 +17,7 @@ from pathlib import Path
 # Get the current directory since __file__ is not available in -c mode
 current_dir = os.path.dirname(os.path.abspath('.'))
 sys.path.append(current_dir)
-from fixed_downloader import connect_to_garmin, download_today_activities
+from garmin_sync import connect_to_garmin, download_today_activities
 client = connect_to_garmin()
 if client:
     download_today_activities(client, 'TCX')

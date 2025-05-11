@@ -12,18 +12,18 @@ import importlib.util
 
 # Add parent directory to path to import the downloader module
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-fixed_downloader_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'fixed_downloader.py')
-spec = importlib.util.spec_from_file_location('fixed_downloader', fixed_downloader_path)
-fixed_downloader = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(fixed_downloader)
-load_saved_credentials = fixed_downloader.load_saved_credentials
-save_credentials = fixed_downloader.save_credentials
-decrypt_password = fixed_downloader.decrypt_password
-export_to_csv = fixed_downloader.export_to_csv
-backup_data_file = fixed_downloader.backup_data_file
+garmin_sync_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'garmin_sync.py')
+spec = importlib.util.spec_from_file_location('garmin_sync', garmin_sync_path)
+garmin_sync = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(garmin_sync)
+load_saved_credentials = garmin_sync.load_saved_credentials
+save_credentials = garmin_sync.save_credentials
+decrypt_password = garmin_sync.decrypt_password
+export_to_csv = garmin_sync.export_to_csv
+backup_data_file = garmin_sync.backup_data_file
 
 # Helper for patching
-MODULE_PATH = 'fixed_downloader'
+MODULE_PATH = 'garmin_sync'
 def get_module_path(name):
     return f'{MODULE_PATH}.{name}'
 
@@ -165,4 +165,4 @@ if __name__ == "__main__":
     unittest.main()
 
 # ARCHIVED: This test referenced the old downloader.py, which is no longer used.
-# Please use fixed_downloader.py for any new tests.
+# Please use garmin_sync.py for any new tests.
