@@ -255,6 +255,8 @@ def export_to_csv(stats: Dict[str, Any], date_str: str, export_dir: Path) -> Pat
     
     # For consistency, we'll overwrite the file if it exists but has different columns
     # This ensures that changes to our data structure don't result in misaligned columns
+    # We also check for duplicate entries by date to avoid adding the same date twice
+    duplicate_entry = False
     if file_exists:
         with open(csv_file, 'r', newline='', encoding='utf-8') as f:
             reader = csv.reader(f)
@@ -263,16 +265,25 @@ def export_to_csv(stats: Dict[str, Any], date_str: str, export_dir: Path) -> Pat
                 if set(existing_headers) != set(all_fields):
                     # Headers don't match, overwrite the file
                     file_exists = False
+                else:
+                    # Check if this date already exists in the file
+                    for row in reader:
+                        if row and row[0] == date_str:  # First column should be date
+                            duplicate_entry = True
+                            break
             except StopIteration:
                 # File is empty
                 file_exists = False
     
     mode = 'a' if file_exists else 'w'
-    with open(csv_file, mode, newline='', encoding='utf-8') as f:
-        writer = csv.DictWriter(f, fieldnames=all_fields)
-        if not file_exists:
-            writer.writeheader()
-        writer.writerow(row_data)
+    
+    # Only write if this is a new date or we're creating a new file
+    if not duplicate_entry:
+        with open(csv_file, mode, newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=all_fields)
+            if not file_exists:
+                writer.writeheader()
+            writer.writerow(row_data)
     
     # Also create a dated archive copy for backup
     archive_dir = export_dir / "archive"
@@ -477,7 +488,12 @@ def get_activities(garmin_client: Optional[Garmin], start_date: Optional[str] = 
             
             activity_id = activity.get("activityId")
             if activity_id:
-                print(f"Activity ID: {activity_id} (you can use this to download detailed data)")
+                print(f"Activity ID: {activity_id}")
+                
+                # Ask if user wants to download this activity
+                download = input(f"Download activity {i} in TCX format? (y/n): ").strip().lower()
+                if download == 'y':
+                    download_activity_file(garmin_client, activity_id, 'TCX')
                 
     except (ConnectionError, TimeoutError) as e:
         print(f"Connection error while getting activities: {e}")
@@ -572,6 +588,129 @@ if __name__ == "__main__":
     print("\nYou can manually run the export script anytime with:")
     print(f"python3 {script_path}")
 
+def download_activity_file(garmin_client: Optional[Garmin], activity_id: str, 
+                        format_type: str = 'TCX', output_dir: Optional[Path] = None) -> Optional[Path]:
+    """Download an activity file in the specified format
+    
+    Args:
+        garmin_client: The Garmin Connect client
+        activity_id: The activity ID to download
+        format_type: Format type ('TCX', 'GPX', 'KML', 'CSV', 'ORIGINAL')
+        output_dir: Output directory (defaults to exports/activities if None)
+        
+    Returns:
+        Path to the downloaded file if successful, None otherwise
+    """
+    if not garmin_client:
+        print("Not connected to Garmin Connect")
+        return None
+        
+    try:
+        # Get valid format type
+        format_enum = None
+        try:
+            format_enum = getattr(Garmin.ActivityDownloadFormat, format_type.upper())
+        except AttributeError:
+            print(f"Invalid format: {format_type}")
+            print("Valid formats: TCX, GPX, KML, CSV, ORIGINAL")
+            return None
+        
+        # Get activity details for filename
+        activity = garmin_client.get_activity_details(activity_id)
+        if not activity:
+            print(f"Activity ID {activity_id} not found")
+            return None
+        
+        # Extract activity information for filename
+        # For summary, check both activitySummary and summaryDTO paths
+        summary = activity.get("activitySummary", activity.get("summaryDTO", {}))
+        
+        # Get start time for the filename
+        start_time_local = None
+        # Try different paths where start time might be found
+        if "startTimeLocal" in summary:
+            start_time_local = summary.get("startTimeLocal", "")
+        elif "startTimeLocal" in activity:
+            start_time_local = activity.get("startTimeLocal", "")
+            
+        if start_time_local:
+            # Convert YYYY-MM-DDThh:mm:ss.000 to YYYY-MM-DD_hhmmss
+            start_time_local = start_time_local.replace("T", "_").replace(":", "").split(".")[0]
+        else:
+            # Use current timestamp as fallback
+            start_time_local = dt.datetime.now().strftime("%Y-%m-%d_%H%M%S")
+        
+        # Get activity name
+        activity_name = None
+        if "activityName" in activity:
+            activity_name = activity.get("activityName", "").replace(" ", "_")
+            
+        # Get activity type
+        activity_type = "activity"  # Default value
+        if "activityType" in activity and isinstance(activity["activityType"], dict):
+            activity_type = activity["activityType"].get("typeKey", "activity")
+        
+        # Create sanitized filename
+        filename_parts = []
+        
+        # Always include timestamp
+        if start_time_local:
+            filename_parts.append(start_time_local)
+            
+        # Add activity type if available
+        if activity_type and activity_type != "activity":
+            filename_parts.append(activity_type)
+            
+        # Add activity name if available
+        if activity_name:
+            filename_parts.append(activity_name)
+            
+        # Add activity ID for uniqueness
+        filename_parts.append(str(activity_id))
+            
+        # Join parts with underscores and add extension
+        filename = "_".join(filename_parts) + f".{format_type.lower()}"
+        
+        # Replace any invalid characters
+        filename = filename.replace("/", "_").replace("\\", "_")
+        
+        # Set up output directory
+        if output_dir is None:
+            output_dir = Path(__file__).parent / "exports" / "activities"
+        
+        # Ensure the directory exists
+        output_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Full path for the file
+        output_path = output_dir / filename
+        
+        # Download the activity
+        print(f"Downloading activity {activity_id} in {format_type} format...")
+        activity_data = garmin_client.download_activity(activity_id, format_enum)
+        
+        # Write activity data to file
+        with open(output_path, "wb") as f:
+            f.write(activity_data)
+            
+        print(f"Activity downloaded to {output_path}")
+        return output_path
+        
+    except ConnectionError as e:
+        print(f"Connection error while downloading activity: {e}")
+        print("Check your internet connection and try again.")
+        return None
+    except ValueError as e:
+        print(f"Value error while downloading activity: {e}")
+        return None
+    except IOError as e:
+        print(f"I/O error while saving activity file: {e}")
+        print(f"Check if you have write permissions for {output_dir}")
+        return None
+    except Exception as e:
+        print(f"Error downloading activity: {e}")
+        traceback.print_exc()
+        return None
+
 def show_menu(garmin_client: Optional[Garmin]) -> None:
     """Show menu of options for Garmin Connect data retrieval"""
     if not garmin_client:
@@ -585,9 +724,10 @@ def show_menu(garmin_client: Optional[Garmin]) -> None:
         print("3. Get recent activities")
         print("4. Export today's data to CSV and Nextcloud")
         print("5. Setup daily automatic export to Nextcloud")
-        print("6. Exit")
+        print("6. Download an activity file")
+        print("7. Exit")
         
-        choice = input("\nEnter your choice (1-6): ").strip()
+        choice = input("\nEnter your choice (1-7): ").strip()
         
         if choice == "1":
             get_stats(garmin_client)
@@ -604,10 +744,16 @@ def show_menu(garmin_client: Optional[Garmin]) -> None:
         elif choice == "5":
             setup_daily_export(garmin_client)
         elif choice == "6":
+            activity_id = input("Enter activity ID: ").strip()
+            format_type = input("Enter format type (default: TCX, others: GPX, KML, CSV, ORIGINAL): ").strip().upper()
+            if not format_type:
+                format_type = "TCX"  # Set default format to TCX
+            download_activity_file(garmin_client, activity_id, format_type)
+        elif choice == "7":
             print("Goodbye!")
             break
         else:
-            print("Invalid choice. Please select 1-6.")
+            print("Invalid choice. Please select 1-7.")
 
 if __name__ == "__main__":
     client = connect_to_garmin()

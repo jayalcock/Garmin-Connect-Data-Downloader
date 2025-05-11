@@ -112,8 +112,12 @@ class TestExportFunctions(unittest.TestCase):
         result = export_to_csv(test_stats, test_date, export_dir)
         
         # Verify
-        mock_mkdir.assert_called_once()
-        mock_file.assert_called_once()
+        # Two mkdir calls are expected: one for export_dir and one for archive_dir
+        self.assertEqual(mock_mkdir.call_count, 2)
+        # Assert all calls are with the same parameters (parents=True, exist_ok=True)
+        for call in mock_mkdir.call_args_list:
+            self.assertEqual(call, call(parents=True, exist_ok=True))
+        mock_file.assert_called()
         self.assertEqual(result, export_dir / "garmin_stats.csv")
     
     @patch('shutil.copy2')
