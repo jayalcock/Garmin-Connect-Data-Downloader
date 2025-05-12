@@ -249,7 +249,7 @@ def export_to_csv(stats: Dict[str, Any], date_str: str, export_dir: Path) -> Pat
     # Add body measurement fields if available
     body_fields = [
         'weightInGrams', 'bmi', 'bodyFatPercentage', 'bodyWater', 'boneMass', 
-        'muscleMass', 'visceralFat', 'metabolicAge', 'physiqueRating'
+        'muscleMass'
     ]
     
     # Alternative field names that might be used by the API
