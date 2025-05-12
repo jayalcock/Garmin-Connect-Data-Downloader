@@ -1,6 +1,6 @@
 # Garmin Connect Data Downloader
 
-This project allows you to automatically download your health and fitness data from Garmin Connect and save it as CSV files.
+This project allows you to automatically download your health and fitness data from Garmin Connect and save it as CSV files. It now includes OpenAI integration for analyzing your workout data.
 
 ## Project Structure
 
@@ -11,16 +11,25 @@ Data download/
 ├── daily_export.py         # Symlink to src/daily_export.py script for automated export
 ├── manual_export.py        # Symlink to src/manual_export.py script with MFA support
 ├── download_today.sh       # Shell script to download today's activities
-├── setup.py               # Python package setup file
+├── analyze_workout.py      # CLI tool for analyzing workout data with ChatGPT
+├── setup.py                # Python package setup file
 ├── docs/                   # Documentation directory
 │   ├── APP_PASSWORD_GUIDE.md    # Instructions for setting up app passwords
 │   ├── BACKUP_LOCATION_CHANGES.md # Information on backup location changes
 │   ├── CHANGELOG.md       # Project changelog
+│   ├── OPENAI_INTEGRATION.md # Guide for using the OpenAI integration
 │   └── README.md          # Additional documentation
 ├── src/                     # Source code directory
 │   ├── __init__.py          # Package init file
 │   ├── daily_export.py      # Daily automated export script
 │   └── manual_export.py     # Manual export script with MFA support
+├── utils/                   # Utility scripts and helper functions
+│   ├── check_json.py        # JSON validation utility
+│   ├── check_empty.py       # Check for empty data in exports
+│   ├── merge_csv_files.py   # Utility to merge CSV files
+│   ├── check_hrv.py         # HRV data validation utility
+│   ├── dump_sleep_data.py   # Sleep data extraction utility
+│   └── openai_integration.py # OpenAI integration for workout analysis
 ├── tests/                   # Test directory 
 │   ├── __init__.py          # Test package init file
 │   ├── run_tests.py         # Script to run all tests
@@ -129,6 +138,30 @@ The latest version allows you to automatically download all of today's activitie
 3. All activities recorded today will be downloaded without requiring manual confirmation
 
 This makes it easy to quickly back up your daily workout data without having to manually confirm each download.
+
+### OpenAI Integration for Workout Analysis
+
+The newest feature allows you to send your workout data to ChatGPT for personalized analysis and recommendations:
+
+```
+python analyze_workout.py
+```
+
+Key capabilities:
+- Configure your OpenAI API key with `--configure`
+- List recent activities with `--list-activities`
+- Analyze a specific activity using `--activity-id <ID>`
+- Analyze activities from a specific date with `--date YYYY-MM-DD`
+
+The analysis includes:
+- Performance insights based on your metrics
+- Recovery recommendations
+- Training suggestions
+- Comparisons to your previous workouts (when available)
+
+All analyses are saved to `exports/analysis/` for future reference.
+
+For detailed instructions, see [OpenAI Integration Guide](docs/OPENAI_INTEGRATION.md).
 
 To run the automatic download directly from the command line:
 
