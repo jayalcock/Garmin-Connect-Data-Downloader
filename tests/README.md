@@ -4,10 +4,15 @@ This directory contains tests for the Garmin data downloader application. These 
 
 ## Test Files
 
+### Automated Tests
 - `test_downloader.py`: Tests for the core downloader functions (credentials, exports)
 - `test_auth.py`: Tests for Garmin Connect authentication functions
 - `test_data_retrieval.py`: Tests for data retrieval and processing functions
 - `test_daily_export.py`: Tests for the daily automated export functionality
+
+### Manual Tests
+- `test_weight_data.py`: Tests extracting and mapping weight data from Garmin Connect API
+- `simple_test.py`: Simple smoke tests for basic functionality
 
 ## Running Tests
 

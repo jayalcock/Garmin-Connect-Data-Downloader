@@ -1,10 +1,17 @@
 #!/usr/bin/env python3
 import json
 import sys
+import os
+
+# Add the parent directory to the path
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
 
 # Load the raw JSON data
 try:
-    with open("exports/garmin_stats_2025-05-11_raw.json", 'r') as f:
+    json_path = os.path.join(parent_dir, "exports", "garmin_stats_2025-05-11_raw.json")
+    with open(json_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
 except Exception as e:
     print(f"Error loading JSON: {e}")

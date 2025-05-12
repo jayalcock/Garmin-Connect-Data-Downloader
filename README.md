@@ -6,29 +6,44 @@ This project allows you to automatically download your health and fitness data f
 
 ```
 Data download/
-├── __init__.py               # Root init file for Python package
-├── run_daily_export.py      # Script to run the daily export
-├── run_manual_export.py     # Script to run manual export with MFA support
-├── downloader.py            # Symlink to src/downloader.py for backward compatibility
-├── test_tcx_download.py     # Symlink to tests/scripts/test_tcx_download.py
-├── test_today_activities.py # Symlink to tests/scripts/test_today_activities.py
-├── setup.py                 # Python package setup file
-├── APP_PASSWORD_GUIDE.md    # Instructions for setting up app passwords
+├── __init__.py             # Root init file for Python package
+├── garmin_sync.py          # Main implementation file (core functionality)
+├── daily_export.py         # Symlink to src/daily_export.py script for automated export
+├── manual_export.py        # Symlink to src/manual_export.py script with MFA support
+├── download_today.sh       # Shell script to download today's activities
+├── setup.py               # Python package setup file
+├── docs/                   # Documentation directory
+│   ├── APP_PASSWORD_GUIDE.md    # Instructions for setting up app passwords
+│   ├── BACKUP_LOCATION_CHANGES.md # Information on backup location changes
+│   ├── CHANGELOG.md       # Project changelog
+│   └── README.md          # Additional documentation
 ├── src/                     # Source code directory
 │   ├── __init__.py          # Package init file
-│   ├── downloader.py        # Core functionality for connecting to Garmin Connect
 │   ├── daily_export.py      # Daily automated export script
 │   └── manual_export.py     # Manual export script with MFA support
-├── tests/                   # Test directory
+├── tests/                   # Test directory 
 │   ├── __init__.py          # Test package init file
 │   ├── run_tests.py         # Script to run all tests
 │   ├── test_auth.py         # Authentication tests
 │   ├── test_daily_export.py # Daily export tests
 │   ├── test_downloader.py   # Core downloader tests
+│   ├── test_weight_data.py  # Weight data mapping tests
 │   ├── test_mfa.py          # MFA testing script
-│   ├── test_data_retrieval.py # Data retrieval tests
-│   └── scripts/             # Additional test scripts directory
-│       ├── test_tcx_download.py # TCX download test script
+│   └── test_data_retrieval.py # Data retrieval tests
+├── utils/                   # Utility scripts 
+│   ├── check_empty.py       # Check for empty fields in CSV exports
+│   ├── check_hrv.py         # Check HRV data from Garmin Connect
+│   ├── check_json.py        # Examine raw JSON data from Garmin API
+│   ├── dump_sleep_data.py   # Extract detailed sleep data
+│   └── merge_csv_files.py   # Merge multiple CSV exports
+├── data/                    # Sample data directory
+│   ├── hrv_data.json        # Sample HRV data for testing
+│   └── sleep_data_2025-05-11.json # Sample sleep data for testing
+├── exports/                 # Output directory for CSV and JSON exports
+│   ├── archive/             # Archive of dated exports
+│   └── activities/          # Directory for exported activity files
+└── archive/                 # Old code archive for reference
+    └── backups/             # Backup of old script versions
 │       └── test_today_activities.py # Today's activities test script
 ├── exports/                 # Directory for exported CSV files
 │   ├── garmin_stats.csv     # Main CSV file with all data (each row is a date)

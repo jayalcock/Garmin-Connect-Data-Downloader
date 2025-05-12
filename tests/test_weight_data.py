@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 # Add parent directory to path
-parent_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
@@ -16,7 +16,7 @@ from garmin_sync import get_stats
 def main():
     """Test weight data extraction from raw JSON"""
     # Load a sample raw JSON file
-    json_path = Path(__file__).parent / "exports" / "garmin_stats_2025-05-11_raw.json"
+    json_path = Path(parent_dir) / "exports" / "garmin_stats_2025-05-11_raw.json"
     
     if not json_path.exists():
         print(f"Error: Cannot find {json_path}")

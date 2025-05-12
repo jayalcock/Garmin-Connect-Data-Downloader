@@ -2,6 +2,12 @@
 import os
 import sys
 import json
+
+# Add the parent directory to the path to ensure we can find modules
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
 from garmin_sync import connect_to_garmin
 
 # Set test mode
@@ -19,7 +25,8 @@ print(f"Getting HRV data for {date_str}")
 hrv_data = client.get_hrv_data(date_str)
 
 # Save HRV data to file for examination
-with open("hrv_data.json", "w") as f:
+output_file = os.path.join(parent_dir, "data", "hrv_data.json")
+with open(output_file, "w", encoding="utf-8") as f:
     json.dump(hrv_data, f, indent=2)
 print(f"HRV data saved to hrv_data.json")
 
