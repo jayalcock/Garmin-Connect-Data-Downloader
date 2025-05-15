@@ -211,8 +211,14 @@ def list_recent_activities(garmin_client, days: int = 7) -> List[Dict[str, Any]]
             
         return recent_activities
             
-    except Exception as e:
-        print(f"Error listing activities: {e}")
+    except (ConnectionError, TimeoutError) as e:
+        print(f"Connection error while listing activities: {e}")
+        return []
+    except ValueError as e:
+        print(f"Value error while listing activities: {e}")
+        return []
+    except (KeyError, TypeError) as e:
+        print(f"Data format error while listing activities: {e}")
         return []
 
 def analyze_activity(garmin_client, activity_id: str) -> bool:
@@ -254,6 +260,12 @@ def analyze_activity(garmin_client, activity_id: str) -> bool:
     
     if not analysis:
         print("Error getting analysis from OpenAI.")
+        print("Please check the logs for more information.")
+        print("Possible issues:")
+        print("1. The model may not be available")
+        print("2. Your API key may be invalid")
+        print("3. You may have exceeded your quota")
+        print("4. There may be a connectivity issue")
         return False
     
     # Save the analysis
@@ -379,8 +391,14 @@ def analyze_date_activities(garmin_client, date_str: str) -> bool:
     except ValueError as e:
         print(f"Invalid date format. Please use YYYY-MM-DD: {e}")
         return False
-    except Exception as e:
-        print(f"Error analyzing date activities: {e}")
+    except (ConnectionError, TimeoutError) as e:
+        print(f"Connection error while analyzing activities: {e}")
+        return False
+    except (KeyError, TypeError) as e:
+        print(f"Data format error while analyzing activities: {e}")
+        return False
+    except RuntimeError as e:
+        print(f"Runtime error while analyzing activities: {e}")
         return False
 
 def main():

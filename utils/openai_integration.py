@@ -38,6 +38,54 @@ class OpenAIAnalyzer:
         
         self.client = OpenAI(api_key=self.api_key) if self.api_key else None
     
+    def get_available_models(self) -> List[str]:
+        """
+        Get a list of available models from the OpenAI API.
+        
+        Returns:
+            List of model IDs that can be used
+        """
+        if not self.is_ready():
+            logger.error("OpenAI client not initialized. Check API key.")
+            return []
+            
+        try:
+            models = self.client.models.list()
+            return [model.id for model in models.data]
+        except Exception as e:
+            logger.error(f"Error fetching available models: {e}")
+            return []
+            
+    def get_best_available_model(self) -> str:
+        """
+        Find the best available model to use for analysis.
+        
+        Returns:
+            Model ID string for the best available model
+        """
+        preferred_models = [
+            "gpt-4.1-mini",
+            "gpt-4.1",
+            "gpt-4.1-nano"
+        ]
+        
+        try:
+            available_models = self.get_available_models()
+            
+            # Find the first preferred model that's available
+            for model in preferred_models:
+                for available_model in available_models:
+                    if model in available_model:  # Check if the model name contains our preferred model
+                        logger.info(f"Using model: {available_model}")
+                        return available_model
+                        
+            # If none of our preferred models are available, use the default
+            logger.warning("No preferred models available, using default gpt-3.5-turbo")
+            return "gpt-3.5-turbo"
+        except Exception as e:
+            logger.error(f"Error selecting model: {e}")
+            return "gpt-3.5-turbo"  # Fallback to GPT-3.5 Turbo
+    
     def is_ready(self) -> bool:
         """Check if the OpenAI client is properly initialized."""
         return self.client is not None
@@ -123,9 +171,12 @@ class OpenAIAnalyzer:
                 {"role": "user", "content": f"Here is my workout data from {workout_data.get('date', 'today')}:\n{json.dumps(workout_data, indent=2)}\n\nPlease analyze this data and provide insights."}
             ]
             
+            # Get the best available model
+            model = self.get_best_available_model()
+            
             # Call the OpenAI Chat Completions API
             response = self.client.chat.completions.create(
-                model="gpt-4",  # Using GPT-4 for best analysis
+                model=model,
                 messages=messages,
                 max_tokens=1000
             )
@@ -143,7 +194,17 @@ class OpenAIAnalyzer:
             return None
             
         except Exception as e:
-            logger.error(f"Error calling OpenAI API: {e}")
+            error_message = str(e)
+            logger.error(f"Error calling OpenAI API: {error_message}")
+            
+            # Check for specific error types
+            if "model_not_found" in error_message:
+                logger.info("Model not found. Will attempt to use a different model on next try.")
+            elif "insufficient_quota" in error_message:
+                logger.error("OpenAI API quota exceeded. Please check your billing information.")
+            elif "invalid_api_key" in error_message:
+                logger.error("Invalid API key. Please check your API key is correct.")
+                
             return None
     
     def save_analysis(self, analysis: Dict[str, Any], output_dir: Optional[Path] = None) -> Optional[Path]:

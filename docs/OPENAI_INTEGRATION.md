@@ -75,6 +75,16 @@ The analysis results include:
 
 The analysis is displayed in the terminal and saved as a JSON file in the `exports/analysis` directory.
 
+### AI Model Selection
+
+The system automatically selects the best available OpenAI model from the following options:
+
+1. GPT-4 Turbo (if available)
+2. GPT-4 (if available)
+3. GPT-3.5 Turbo (fallback option)
+
+If none of the preferred models are available, the system will default to GPT-3.5 Turbo.
+
 ## Advanced Usage
 
 ### Programmatic Use
@@ -111,6 +121,14 @@ export OPENAI_API_KEY="your-api-key-here"
 - **Connection Problems**: Check your internet connection
 - **Rate Limiting**: OpenAI has rate limits; if you hit them, wait and try again later
 - **Missing Data**: Some workouts may not have enough data for meaningful analysis
+- **Model Not Found**: If you encounter a "model not found" error, the system will automatically try to use an alternative model
+- **API Errors**: Check the logs in the terminal for detailed error information
+
+If you encounter persistent issues:
+
+1. Run with `--configure` to update your API key
+2. Check that your OpenAI account has access to the models being requested
+3. Verify that your billing information is up to date on your OpenAI account
 
 ## Privacy Note
 
