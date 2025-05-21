@@ -26,8 +26,8 @@ def main():
     garmin_client = connect_to_garmin(non_interactive=True)
     
     if garmin_client:
-        # Download today's activities in TCX format
-        download_today_activities(garmin_client, "TCX")
+        # Download today's activities in ORIGINAL format
+        download_today_activities(garmin_client, "ORIGINAL")
     else:
         print("Failed to connect to Garmin Connect")
         return 1

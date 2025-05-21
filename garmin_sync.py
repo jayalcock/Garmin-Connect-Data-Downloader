@@ -732,13 +732,13 @@ def get_activities(garmin_client: Optional[Garmin], start_date: Optional[str] = 
                 
                 # Automatically download today's activities
                 if is_from_today:
-                    print(f"Automatically downloading today's activity {i} in TCX format...")
-                    download_activity_file(garmin_client, activity_id, 'TCX')
+                    print(f"Automatically downloading today's activity {i} in FIT format...")
+                    download_activity_file(garmin_client, activity_id, 'FIT')
                 else:
                     # For older activities, still ask for confirmation
-                    download = input(f"Download activity {i} from {start_time} in TCX format? (y/n): ").strip().lower()
+                    download = input(f"Download activity {i} from {start_time} in FIT format? (y/n): ").strip().lower()
                     if download == 'y':
-                        download_activity_file(garmin_client, activity_id, 'TCX')
+                        download_activity_file(garmin_client, activity_id, 'FIT')
                 
     except (ConnectionError, TimeoutError) as e:
         print(f"Connection error while getting activities: {e}")
@@ -834,7 +834,7 @@ if __name__ == "__main__":
     print(f"python3 {script_path}")
 
 def download_activity_file(garmin_client: Optional[Garmin], activity_id: str, 
-                        format_type: str = 'TCX', output_dir: Optional[Path] = None) -> Optional[Path]:
+                        format_type: str = 'ORIGINAL', output_dir: Optional[Path] = None) -> Optional[Path]:
     """Download an activity file in the specified format
     
     Args:
@@ -857,7 +857,7 @@ def download_activity_file(garmin_client: Optional[Garmin], activity_id: str,
             format_enum = getattr(Garmin.ActivityDownloadFormat, format_type.upper())
         except AttributeError:
             print(f"Invalid format: {format_type}")
-            print("Valid formats: TCX, GPX, KML, CSV, ORIGINAL")
+            print("Valid formats: ORIGINAL, TCX, GPX, KML, CSV")
             return None
         
         # Get activity details for filename
@@ -956,14 +956,14 @@ def download_activity_file(garmin_client: Optional[Garmin], activity_id: str,
         traceback.print_exc()
         return None
 
-def download_today_activities(garmin_client: Optional[Garmin], format_type: str = 'TCX') -> None:
+def download_today_activities(garmin_client: Optional[Garmin], format_type: str = 'ORIGINAL') -> None:
     """Download all of today's activities
     
     This is a convenience function that gets today's activities and downloads them automatically.
     
     Args:
         garmin_client: The Garmin Connect client
-        format_type: Format type ('TCX', 'GPX', 'KML', 'CSV', 'ORIGINAL')
+        format_type: Format type ('TCX', 'GPX', 'KML', 'CSV', 'ORIGINAL'), defaults to ORIGINAL
     """
     if not garmin_client:
         print("Not connected to Garmin Connect")
@@ -1403,8 +1403,8 @@ def show_menu(garmin_client: Optional[Garmin]) -> None:
         print("3. Get recent activities")
         print("4. Export today's data to CSV and Nextcloud")
         print("5. Setup daily automatic export to Nextcloud")
-        print("6. Download an activity file")
-        print("7. Download today's activities automatically")
+        print("6. Download an activity file (ORIGINAL format)")
+        print("7. Download today's activities automatically (ORIGINAL format)")
         print("8. Get HRV data for a specific date")
         print("9. Get sleep data for a specific date")
         print("10. Exit")
@@ -1427,16 +1427,11 @@ def show_menu(garmin_client: Optional[Garmin]) -> None:
             setup_daily_export(garmin_client)
         elif choice == "6":
             activity_id = input("Enter activity ID: ").strip()
-            format_type = input("Enter format type (default: TCX, others: GPX, KML, CSV, ORIGINAL): ").strip().upper()
-            if not format_type:
-                format_type = "TCX"  # Set default format to TCX
-            download_activity_file(garmin_client, activity_id, format_type)
+            download_activity_file(garmin_client, activity_id, 'ORIGINAL')
         elif choice == "7":
             # Automatically download today's activities 
-            format_type = input("Enter format type (default: TCX, others: GPX, KML, CSV, ORIGINAL): ").strip().upper()
-            if not format_type:
-                format_type = "TCX"  # Set default format to TCX
-            download_today_activities(garmin_client, format_type)
+            print("Downloading today's activities in ORIGINAL format...")
+            download_today_activities(garmin_client, 'ORIGINAL')
         elif choice == "8":
             date_str = input("Enter date (YYYY-MM-DD): ").strip()
             get_hrv_data(garmin_client, date_str)

@@ -30,7 +30,7 @@ sys.path.append(current_dir)
 from garmin_sync import connect_to_garmin, download_today_activities
 client = connect_to_garmin(non_interactive=True)
 if client:
-    download_today_activities(client, 'TCX')
+    download_today_activities(client, 'ORIGINAL')
 "
 
 echo "\nFinished downloading today's activities."

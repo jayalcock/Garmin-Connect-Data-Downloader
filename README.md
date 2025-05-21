@@ -123,9 +123,27 @@ This will:
 * Download daily health statistics (steps, heart rate, sleep, etc.)
 * Export data to CSV files for analysis
 * Automatically back up to Nextcloud
-* Download activity files (workouts, runs, etc.) in TCX, GPX, or other formats
+* Download activity files (workouts, runs, etc.) in FIT format
 * Automatic download of today's activities without manual confirmation
 * Set up scheduled daily exports via crontab
+
+## File Formats
+
+### FIT Format
+
+All activities are now downloaded in the native FIT (Flexible and Interoperable Data Transfer) format. This is Garmin's proprietary format that contains the raw, complete data for your activities. Benefits include:
+
+- Complete and accurate activity data with no loss of fidelity
+- Direct compatibility with Garmin's ecosystem and many third-party tools
+- Efficient binary format that preserves all sensor data
+- Better support for advanced metrics like running dynamics, power data, etc.
+
+### CSV Format
+
+Daily statistics (steps, heart rate, sleep, etc.) continue to be exported in CSV format which allows for:
+- Easy analysis in spreadsheets and data analysis tools
+- Human-readable format for quick inspection
+- Simple integration with other systems
 
 ## New Features
 
@@ -133,11 +151,10 @@ This will:
 
 The latest version allows you to automatically download all of today's activities with a single command:
 
-1. Choose option 7 from the menu: "Download today's activities automatically"
-2. Select your preferred format (TCX, GPX, KML, CSV, ORIGINAL)
-3. All activities recorded today will be downloaded without requiring manual confirmation
+1. Choose option 7 from the menu: "Download today's activities automatically (ORIGINAL format)"
+2. All activities recorded today will be downloaded in ORIGINAL format without requiring manual confirmation
 
-This makes it easy to quickly back up your daily workout data without having to manually confirm each download.
+This makes it easy to quickly back up your daily workout data without having to manually confirm each download. All activities are now downloaded in the native ORIGINAL format (Garmin's native format) for maximum data fidelity and compatibility with other fitness analysis tools.
 
 ### OpenAI Integration for Workout Analysis
 
