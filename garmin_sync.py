@@ -18,6 +18,8 @@ import shutil
 import base64
 import logging
 import builtins
+import zipfile
+import io
 from pathlib import Path
 import traceback
 import requests
@@ -732,13 +734,13 @@ def get_activities(garmin_client: Optional[Garmin], start_date: Optional[str] = 
                 
                 # Automatically download today's activities
                 if is_from_today:
-                    print(f"Automatically downloading today's activity {i} in FIT format...")
-                    download_activity_file(garmin_client, activity_id, 'FIT')
+                    print(f"Automatically downloading today's activity {i} in ORIGINAL format (saved as .fit)...")
+                    download_activity_file(garmin_client, activity_id, 'ORIGINAL')
                 else:
                     # For older activities, still ask for confirmation
-                    download = input(f"Download activity {i} from {start_time} in FIT format? (y/n): ").strip().lower()
+                    download = input(f"Download activity {i} from {start_time} in ORIGINAL format (saved as .fit)? (y/n): ").strip().lower()
                     if download == 'y':
-                        download_activity_file(garmin_client, activity_id, 'FIT')
+                        download_activity_file(garmin_client, activity_id, 'ORIGINAL')
                 
     except (ConnectionError, TimeoutError) as e:
         print(f"Connection error while getting activities: {e}")
@@ -841,6 +843,8 @@ def download_activity_file(garmin_client: Optional[Garmin], activity_id: str,
         garmin_client: The Garmin Connect client
         activity_id: The activity ID to download
         format_type: Format type ('TCX', 'GPX', 'KML', 'CSV', 'ORIGINAL')
+                    Note: ORIGINAL format files come as ZIP archives containing a .fit file;
+                    this function extracts the .fit file automatically.
         output_dir: Output directory (defaults to exports/activities if None)
         
     Returns:
@@ -914,7 +918,9 @@ def download_activity_file(garmin_client: Optional[Garmin], activity_id: str,
         filename_parts.append(str(activity_id))
             
         # Join parts with underscores and add extension
-        filename = "_".join(filename_parts) + f".{format_type.lower()}"
+        # Use .fit extension for ORIGINAL format as it's the standard Garmin format
+        extension = "fit" if format_type.upper() == "ORIGINAL" else format_type.lower()
+        filename = "_".join(filename_parts) + f".{extension}"
         
         # Replace any invalid characters
         filename = filename.replace("/", "_").replace("\\", "_")
@@ -932,6 +938,33 @@ def download_activity_file(garmin_client: Optional[Garmin], activity_id: str,
         # Download the activity
         print(f"Downloading activity {activity_id} in {format_type} format...")
         activity_data = garmin_client.download_activity(activity_id, format_enum)
+        
+        # Check if this is an ORIGINAL format file (which comes as a ZIP)
+        if format_type.upper() == "ORIGINAL":
+            try:
+                # Try to extract the FIT file from the ZIP archive
+                with zipfile.ZipFile(io.BytesIO(activity_data)) as zip_file:
+                    # List all files in the ZIP
+                    file_list = zip_file.namelist()
+                    if not file_list:
+                        print("Warning: ZIP file is empty.")
+                        return None
+                    
+                    # Find the .fit file in the archive
+                    fit_files = [name for name in file_list if name.lower().endswith('.fit')]
+                    if not fit_files:
+                        print("Warning: No .fit files found in the archive.")
+                        print(f"Files in archive: {file_list}")
+                        return None
+                    
+                    # Extract the first .fit file found
+                    fit_file = fit_files[0]
+                    print(f"Extracting {fit_file} from ZIP archive...")
+                    activity_data = zip_file.read(fit_file)
+                    print(f"Successfully extracted FIT file (size: {len(activity_data)} bytes)")
+            except zipfile.BadZipFile:
+                print("Warning: Downloaded file is not a valid ZIP archive.")
+                print("This might be a direct FIT file or another format.")
         
         # Write activity data to file
         with open(output_path, "wb") as f:
@@ -964,6 +997,8 @@ def download_today_activities(garmin_client: Optional[Garmin], format_type: str 
     Args:
         garmin_client: The Garmin Connect client
         format_type: Format type ('TCX', 'GPX', 'KML', 'CSV', 'ORIGINAL'), defaults to ORIGINAL
+                    Note: ORIGINAL format returns a ZIP archive containing the .fit file, which
+                    is automatically extracted
     """
     if not garmin_client:
         print("Not connected to Garmin Connect")

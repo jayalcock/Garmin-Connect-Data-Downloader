@@ -152,9 +152,9 @@ Daily statistics (steps, heart rate, sleep, etc.) continue to be exported in CSV
 The latest version allows you to automatically download all of today's activities with a single command:
 
 1. Choose option 7 from the menu: "Download today's activities automatically (ORIGINAL format)"
-2. All activities recorded today will be downloaded in ORIGINAL format without requiring manual confirmation
+2. All activities recorded today will be downloaded in ORIGINAL format (Garmin's native format which is a ZIP archive containing a .fit file), and the .fit file will be automatically extracted and saved for you.
 
-This makes it easy to quickly back up your daily workout data without having to manually confirm each download. All activities are now downloaded in the native ORIGINAL format (Garmin's native format) for maximum data fidelity and compatibility with other fitness analysis tools.
+This makes it easy to quickly back up your daily workout data with maximum data fidelity and compatibility with other fitness analysis tools.
 
 ### OpenAI Integration for Workout Analysis
 
