@@ -1,6 +1,6 @@
-# Garmin Connect Data Downloader
+# Garmin Connect Data Downloader & Workout Analyzer
 
-This project allows you to automatically download your health and fitness data from Garmin Connect and save it as CSV files. It now includes OpenAI integration for analyzing your workout data.
+This project allows you to automatically download your health and fitness data from Garmin Connect, save it as CSV files, and analyze your workouts. It includes comprehensive visualization tools and ChatGPT integration for detailed workout analysis.
 
 ## Project Structure
 
@@ -156,9 +156,106 @@ The latest version allows you to automatically download all of today's activitie
 
 This makes it easy to quickly back up your daily workout data with maximum data fidelity and compatibility with other fitness analysis tools.
 
-### OpenAI Integration for Workout Analysis
+### Unified CLI Tool for Workout Management
 
-The newest feature allows you to send your workout data to ChatGPT for personalized analysis and recommendations:
+The new unified command-line interface brings together all Garmin data workflow functionality in one tool:
+
+```bash
+./garmin-cli.sh <command> [options]
+```
+
+Available commands:
+
+1. **Download activities from Garmin Connect**
+   ```bash
+   ./garmin-cli.sh download [--days=<days>] [--id=<id>] [--format=<format>]
+   ```
+
+2. **Process a FIT file to CSV with visualizations**
+   ```bash
+   ./garmin-cli.sh process <file> [--charts] [--advanced] [--summary-only]
+   ```
+
+3. **Batch process multiple FIT files**
+   ```bash
+   ./garmin-cli.sh batch <directory> [--recursive] [--charts]
+   ```
+
+4. **Create detailed analysis of a workout**
+   ```bash
+   ./garmin-cli.sh analyze <file> [--charts] [--advanced]
+   ```
+
+5. **Process the most recent FIT file**
+   ```bash
+   ./garmin-cli.sh latest [--charts] [--advanced]
+   ```
+
+6. **Compare multiple workouts and visualize trends**
+   ```bash
+   ./garmin-cli.sh compare [--sport=<sport>] [--days=<days>] [--directory=<directory>]
+   ```
+
+The CLI tool automatically generates:
+- CSV data files with all workout metrics
+- ChatGPT-friendly markdown summaries
+- Visualizations and charts (with `--charts` option)
+
+All outputs are saved in the `exports/chatgpt_ready/` directory for easy access.
+
+### Data Visualization
+
+When using the `--charts` option with the CLI tool, the following visualizations are created:
+
+- **Heart Rate Chart**: Shows your heart rate throughout the workout
+- **Speed/Pace Chart**: Displays your speed (or pace for running)
+- **Elevation Profile**: Shows elevation changes during the workout
+- **Cadence Chart**: Displays your cadence (steps/minute or rpm)
+- **Power Chart**: For cycling workouts with power data
+- **Combined HR/Speed Chart**: Overlays heart rate and speed
+- **Lap Analysis**: Compares metrics across laps
+
+These charts are saved in a `charts/` subdirectory and linked from the workout summary.
+
+#### Advanced Sport-Specific Visualizations
+
+When using the `--advanced` option, specialized charts are generated based on the sport type:
+
+**Running**:
+- Pace charts with average pace overlay
+- Stride length analysis and efficiency metrics
+- Heart rate vs. pace relationship
+
+**Cycling**:
+- Power zone distribution charts
+- Cadence vs. power efficiency analysis
+- Combined terrain and performance analysis
+
+**Swimming**:
+- Lap time analysis
+- SWOLF score charts (swimming efficiency)
+- Stroke rate analysis
+
+#### Workout Comparison and Trend Analysis
+
+The comparison feature allows you to track your progress over time with visualizations of:
+
+- Distance trends across multiple workouts
+- Heart rate trends (average and maximum)
+- Performance improvements (pace for running, power for cycling)
+- Weekly training volume and calorie expenditure
+- Sport-specific metric comparisons
+
+To compare workouts:
+```bash
+./garmin-cli.sh compare --sport=running --days=90
+```
+
+This generates an HTML dashboard in the `exports/workout_comparison/` directory with interactive charts and tables showing your training progress.
+
+### ChatGPT Integration for Workout Analysis
+
+You can also directly analyze your workouts with ChatGPT:
 
 ```
 python analyze_workout.py
