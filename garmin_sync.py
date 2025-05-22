@@ -836,7 +836,8 @@ if __name__ == "__main__":
     print(f"python3 {script_path}")
 
 def download_activity_file(garmin_client: Optional[Garmin], activity_id: str, 
-                        format_type: str = 'ORIGINAL', output_dir: Optional[Path] = None) -> Optional[Path]:
+                        format_type: str = 'ORIGINAL', output_dir: Optional[Path] = None,
+                        create_chatgpt_summary: bool = True) -> Optional[Path]:
     """Download an activity file in the specified format
     
     Args:
@@ -846,6 +847,7 @@ def download_activity_file(garmin_client: Optional[Garmin], activity_id: str,
                     Note: ORIGINAL format files come as ZIP archives containing a .fit file;
                     this function extracts the .fit file automatically.
         output_dir: Output directory (defaults to exports/activities if None)
+        create_chatgpt_summary: Whether to create a ChatGPT-friendly workout summary
         
     Returns:
         Path to the downloaded file if successful, None otherwise
@@ -971,6 +973,130 @@ def download_activity_file(garmin_client: Optional[Garmin], activity_id: str,
             f.write(activity_data)
             
         print(f"Activity downloaded to {output_path}")
+        
+        # Create ChatGPT-friendly summary if requested
+        if create_chatgpt_summary and format_type.upper() == "ORIGINAL":
+            try:
+                # Import required modules for summary creation
+                import fitparse
+                import pandas as pd
+                
+                # Create a directory for ChatGPT summaries
+                chatgpt_dir = Path(__file__).parent / "exports" / "chatgpt_ready"
+                chatgpt_dir.mkdir(parents=True, exist_ok=True)
+                
+                # Create summary filename based on the activity
+                summary_file = chatgpt_dir / f"{output_path.stem}_summary.md"
+                
+                # Parse the FIT file
+                fitfile = fitparse.FitFile(str(output_path))
+                
+                # Extract records
+                records = []
+                for record in fitfile.get_messages():
+                    record_type = record.name
+                    
+                    data_dict = {'record_type': record_type}
+                    for field in record:
+                        field_name = field.name
+                        
+                        if field.value is not None:
+                            data_dict[field_name] = field.value
+                        
+                        if field.units:
+                            data_dict[f"{field_name}_units"] = field.units
+                    
+                    records.append(data_dict)
+                
+                # Convert to DataFrame
+                df = pd.DataFrame(records)
+                
+                # Get session data
+                session_df = df[df['record_type'] == 'session']
+                
+                if not session_df.empty:
+                    session = session_df.iloc[0]
+                    sport_type = session.get('sport', 'activity').title()
+                    
+                    # Create summary markdown
+                    with open(summary_file, 'w') as f:
+                        f.write(f'# {sport_type} Workout Summary\n\n')
+                        
+                        # Basic metrics
+                        if 'total_distance' in session:
+                            distance = session['total_distance']
+                            distance_km = distance / 1000
+                            distance_mi = distance_km * 0.621371
+                            f.write(f'**Distance:** {distance_km:.2f} km ({distance_mi:.2f} miles)\n\n')
+                        
+                        if 'total_elapsed_time' in session:
+                            time = session['total_elapsed_time']
+                            minutes = int(time // 60)
+                            seconds = int(time % 60)
+                            f.write(f'**Duration:** {minutes} minutes {seconds} seconds\n\n')
+                        
+                        if 'start_time' in session:
+                            start_time = session['start_time']
+                            f.write(f'**Date/Time:** {start_time}\n\n')
+                        
+                        if 'total_calories' in session:
+                            f.write(f'**Calories Burned:** {int(session["total_calories"])}\n\n')
+                        
+                        # Heart rate data
+                        hr_info = []
+                        if 'avg_heart_rate' in session:
+                            hr_info.append(f"Average: {int(session['avg_heart_rate'])} bpm")
+                        if 'max_heart_rate' in session:
+                            hr_info.append(f"Max: {int(session['max_heart_rate'])} bpm")
+                        if hr_info:
+                            f.write(f'**Heart Rate:** {", ".join(hr_info)}\n\n')
+                            
+                        # Speed data
+                        if 'avg_speed' in session:
+                            avg_speed = session['avg_speed'] * 3.6  # Convert m/s to km/h
+                            avg_speed_mph = avg_speed * 0.621371
+                            f.write(f'**Average Speed:** {avg_speed:.1f} km/h ({avg_speed_mph:.1f} mph)\n\n')
+                            
+                            if 'max_speed' in session:
+                                max_speed = session['max_speed'] * 3.6
+                                f.write(f'**Max Speed:** {max_speed:.1f} km/h\n\n')
+                        
+                        # Elevation data if available
+                        if 'total_ascent' in session and 'total_descent' in session:
+                            ascent = session['total_ascent']
+                            descent = session['total_descent']
+                            f.write(f'**Elevation:** Gain {int(ascent)}m, Loss {int(descent)}m\n\n')
+                        
+                        # Performance notes
+                        f.write('## Performance Assessment\n\n')
+                        f.write(f'This was a {sport_type.lower()} workout covering {distance_km:.1f} km. ')
+                        
+                        if 'avg_heart_rate' in session:
+                            hr = int(session['avg_heart_rate'])
+                            if hr < 120:
+                                intensity = "low"
+                            elif hr < 150:
+                                intensity = "moderate"
+                            else:
+                                intensity = "high"
+                            f.write(f'The {hr} bpm average heart rate indicates a {intensity} intensity effort.\n\n')
+                        else:
+                            f.write('\n\n')
+                        
+                        # Analysis tips
+                        f.write('## When analyzing with ChatGPT, consider asking about:\n\n')
+                        f.write(f'1. How this {sport_type.lower()} workout compares to typical performances\n')
+                        f.write(f'2. Ways to improve {sport_type.lower()} efficiency and performance\n')
+                        f.write('3. Appropriate recovery and follow-up workouts\n')
+                        f.write('4. How to progressively build on this training session\n')
+                    
+                    print(f"Created ChatGPT-friendly summary at {summary_file}")
+                else:
+                    print("No session data found, couldn't create summary")
+            except Exception as e:
+                print(f"Error creating ChatGPT summary: {e}")
+                # Continue even if summary creation fails
+        
         return output_path
         
     except (ConnectionError, TimeoutError) as e:
