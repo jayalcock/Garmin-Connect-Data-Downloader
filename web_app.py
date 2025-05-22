@@ -19,7 +19,7 @@ import json
 import time
 import shutil
 import tempfile
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from werkzeug.utils import secure_filename
 from flask import (Flask, render_template, request, redirect, url_for, 
@@ -94,6 +94,13 @@ class CompareForm(FlaskForm):
                            default='')
     days = IntegerField('Days to Include', validators=[NumberRange(min=1, max=365)], default=90)
     submit = SubmitField('Compare Workouts')
+
+class HealthStatsForm(FlaskForm):
+    days = IntegerField('Number of days to download', validators=[NumberRange(min=1, max=90)], default=1)
+    start_date = StringField('Start Date (YYYY-MM-DD)', 
+                             validators=[Optional()],
+                             description="Leave blank to use yesterday's date")
+    submit = SubmitField('Download Health Stats')
 
 class CommandArgs:
     """Simple class to mimic argparse namespace for CLI functions"""
@@ -436,6 +443,18 @@ def compare():
     
     return render_template('compare.html', form=form)
 
+@app.route('/compare_result/<result_id>')
+def compare_result(result_id):
+    """Show results of workout comparison"""
+    result_dir = RESULTS_DIR / f"compare_{result_id}"
+    
+    if not result_dir.exists():
+        flash("Result not found", "danger")
+        return redirect(url_for('compare'))
+    
+    return render_template('compare_result.html')
+
+
 @app.route('/latest', methods=['GET'])
 def latest():
     """Process the most recent FIT file"""
@@ -531,6 +550,151 @@ def latest():
         flash(f"Error: {str(e)}", "danger")
     
     return redirect(url_for('home'))
+
+@app.route('/health_stats', methods=['GET', 'POST'])
+def health_stats():
+    """Download daily health statistics from Garmin Connect"""
+    form = HealthStatsForm()
+    
+    if form.validate_on_submit():
+        # Convert form data to CLI arguments
+        args = CommandArgs()
+        args.days = form.days.data
+        args.date = form.start_date.data if form.start_date.data else None
+        args.non_interactive = True
+        
+        # Create a unique results directory
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        result_dir = RESULTS_DIR / f"health_stats_{timestamp}"
+        result_dir.mkdir(exist_ok=True)
+        
+        # Redirect stdout/stderr to capture output
+        old_stdout, old_stderr = sys.stdout, sys.stderr
+        sys.stdout = sys.stderr = output = tempfile.NamedTemporaryFile(mode='w+')
+        
+        try:
+            # Import health_stats_command from garmin_cli.py
+            try:
+                from garmin_cli import health_stats_command
+                success = health_stats_command(args)
+            except ImportError:
+                from garmin_sync import connect_to_garmin, get_stats
+                
+                # Connect to Garmin
+                client = connect_to_garmin(non_interactive=True, allow_mfa=False)
+                
+                if not client:
+                    success = False
+                else:
+                    # Determine the date range
+                    if args.date:
+                        try:
+                            start_date = datetime.strptime(args.date, '%Y-%m-%d').date()
+                        except ValueError:
+                            start_date = datetime.now().date() - timedelta(days=1)
+                    else:
+                        # Default to yesterday if no date provided
+                        start_date = datetime.now().date() - timedelta(days=1)
+                    
+                    days = max(1, args.days)
+                    success = True
+                    
+                    for day_offset in range(days):
+                        # Calculate the date for this iteration
+                        current_date = start_date - timedelta(days=day_offset)
+                        date_str = current_date.isoformat()
+                        
+                        # Get stats for the current date
+                        stats = get_stats(client, date_str=date_str, export=True, interactive=False)
+                        if not stats:
+                            success = False
+            
+            # Reset stdout/stderr
+            sys.stdout.flush()
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr
+            
+            # Read captured output
+            output.seek(0)
+            command_output = output.read()
+            output.close()
+            
+            # Save output to result directory
+            with open(result_dir / "output.txt", "w", encoding="utf-8") as f:
+                f.write(command_output)
+            
+            # Copy csv files to result directory if successful
+            if success:
+                csv_file = Path("exports/garmin_stats.csv")
+                if csv_file.exists():
+                    # Copy the main stats file
+                    shutil.copy2(csv_file, result_dir / "garmin_stats.csv")
+                    
+                    # Also copy any archive files created
+                    archive_dir = Path("exports/archive")
+                    if archive_dir.exists():
+                        result_archive_dir = result_dir / "archive"
+                        result_archive_dir.mkdir(exist_ok=True)
+                        
+                        # Find only the recently created files based on timestamp
+                        # We'll assume files created in the last hour are from this operation
+                        current_time = time.time()
+                        one_hour_ago = current_time - 3600
+                        
+                        for archive_file in archive_dir.glob("garmin_stats_*.csv"):
+                            if os.path.getmtime(archive_file) > one_hour_ago:
+                                shutil.copy2(archive_file, result_archive_dir / archive_file.name)
+                
+                # Read the first few rows of the CSV for display
+                csv_preview = None
+                if (result_dir / "garmin_stats.csv").exists():
+                    try:
+                        import pandas as pd
+                        df = pd.read_csv(result_dir / "garmin_stats.csv", nrows=10)
+                        preview_html = df.to_html(classes="table table-striped table-bordered table-sm", index=False)
+                        csv_preview = {
+                            'html': preview_html,
+                            'rows': len(df),
+                            'columns': len(df.columns)
+                        }
+                    except:
+                        pass
+                
+                return render_template(
+                    'health_stats_result.html',
+                    result_id=timestamp,
+                    success=success,
+                    output=command_output,
+                    days=args.days,
+                    start_date=args.date if args.date else (datetime.now().date() - timedelta(days=1)).isoformat(),
+                    csv_preview=csv_preview
+                )
+            
+            flash("Failed to download health statistics. See output for details.", "danger")
+            return render_template(
+                'health_stats_result.html',
+                result_id=timestamp,
+                success=False,
+                output=command_output,
+                error="Failed to download health statistics."
+            )
+            
+        except Exception as e:
+            # Reset stdout/stderr
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr
+            
+            flash(f"Error: {str(e)}", "danger")
+            return render_template(
+                'health_stats_result.html',
+                result_id=timestamp,
+                success=False,
+                output=str(e),
+                error="An error occurred while downloading health statistics."
+            )
+    
+    return render_template('health_stats.html', form=form)
+
 
 @app.route('/results')
 def results():

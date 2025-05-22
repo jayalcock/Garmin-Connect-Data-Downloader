@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Health Stats Download Results{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-4">
+                <div class="card-header {% if success %}bg-success{% else %}bg-danger{% endif %} text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">Health Statistics Download Results</h4>
+                        <a href="{{ url_for('health_stats') }}" class="btn btn-light btn-sm">New Download</a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if not success %}
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle-fill"></i> {{ error }}
+                        </div>
+                        <p>Possible reasons:</p>
+                        <ul>
+                            <li>You need to authenticate to Garmin Connect</li>
+                            <li>The date is not available in Garmin Connect</li>
+                            <li>Network or API connectivity issues</li>
+                        </ul>
+                    {% else %}
+                        <div class="alert alert-success">
+                            <i class="bi bi-check-circle-fill"></i> Health statistics downloaded successfully!
+                        </div>
+
+                        <h5 class="card-title mb-3">Download Summary</h5>
+                        <p>
+                            <span class="badge bg-primary">{{ days }} day(s)</span>
+                            <span class="badge bg-secondary">Starting from {{ start_date }}</span>
+                        </p>
+                        
+                        {% if csv_preview %}
+                            <div class="card mb-4">
+                                <div class="card-header">Data Preview</div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        {{ csv_preview.html|safe }}
+                                    </div>
+                                    <p class="text-muted small">Showing first {{ csv_preview.rows }} rows of data.</p>
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        <div class="mt-4">
+                            <h5 class="mb-3">Download Options</h5>
+                            <div class="btn-group">
+                                <a href="{{ url_for('download_result', result_id=result_id, file_type='csv') }}" class="btn btn-outline-primary">
+                                    <i class="bi bi-file-earmark-spreadsheet"></i> Download CSV
+                                </a>
+                                <a href="{{ url_for('download_result', result_id=result_id, file_type='archive') }}" class="btn btn-outline-primary">
+                                    <i class="bi bi-file-earmark-zip"></i> Download Archive
+                                </a>
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="mt-4">
+                        <h5>Command Output</h5>
+                        <pre class="bg-light p-3 rounded">{{ output }}</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

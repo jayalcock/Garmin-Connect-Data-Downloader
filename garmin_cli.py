@@ -8,6 +8,7 @@ A command-line tool that brings together all Garmin data workflow functionality:
 - Generate visualizations and charts
 - Create ChatGPT-friendly summaries
 - Compare multiple workouts over time
+- Download daily health statistics from Garmin Connect
 
 Usage:
   garmin_cli.py download [--days=<days>] [--id=<id>] [--format=<format>]
@@ -16,6 +17,7 @@ Usage:
   garmin_cli.py analyze <file>
   garmin_cli.py latest [--charts]
   garmin_cli.py compare [--sport=<sport>] [--days=<days>] [--directory=<directory>]
+  garmin_cli.py health_stats [--date=<date>] [--days=<days>]
   
 Options:
   -h --help               Show this help message
@@ -27,6 +29,7 @@ Options:
   --recursive             Search directory recursively
   --sport=<sport>         Filter by sport type (e.g., running, cycling, swimming)
   --directory=<directory> Directory to search for workout files [default: exports]
+  --date=<date>           Specific date in YYYY-MM-DD format for health stats
 """
 
 import os
@@ -500,6 +503,72 @@ def compare_command(args):
     return True
 
 
+def health_stats_command(args):
+    """Download daily health statistics from Garmin Connect
+    
+    Args:
+        args: Command line arguments
+        
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        from garmin_sync import connect_to_garmin, get_stats
+    except ImportError as e:
+        print(f"Error importing garmin_sync: {e}")
+        print("Make sure you have the correct dependencies installed.")
+        return False
+    
+    print("\n===== Downloading Health Statistics from Garmin Connect =====\n")
+    
+    # Connect to Garmin
+    interactive = not args.non_interactive
+    client = connect_to_garmin(non_interactive=args.non_interactive, allow_mfa=True)
+    
+    if not client:
+        print("Failed to connect to Garmin Connect. Aborting.")
+        return False
+        
+    # Determine the date range
+    if args.date:
+        try:
+            from datetime import datetime, timedelta
+            start_date = datetime.strptime(args.date, '%Y-%m-%d').date()
+        except ValueError:
+            print(f"Invalid date format: {args.date}. Please use YYYY-MM-DD format.")
+            return False
+    else:
+        # Default to yesterday if no date provided
+        from datetime import date, timedelta
+        start_date = date.today() - timedelta(days=1)
+    
+    days = max(1, args.days)
+    
+    print(f"Downloading health statistics for {days} day(s) starting from {start_date.isoformat()}")
+    
+    success = True
+    for day_offset in range(days):
+        # Calculate the date for this iteration
+        current_date = start_date - timedelta(days=day_offset)
+        date_str = current_date.isoformat()
+        
+        print(f"\nProcessing date: {date_str}")
+        
+        # Get stats for the current date
+        stats = get_stats(client, date_str=date_str, export=True, interactive=interactive)
+        if not stats:
+            print(f"Failed to download data for {date_str}")
+            success = False
+            
+    if success:
+        print("\nHealth statistics download completed successfully.")
+        print("Data has been saved to exports/garmin_stats.csv")
+    else:
+        print("\nHealth statistics download completed with some errors.")
+    
+    return success
+
+
 def main():
     parser = argparse.ArgumentParser(description='Garmin Workout Analyzer - Unified CLI Tool')
     subparsers = parser.add_subparsers(dest='command', help='Command to run')
@@ -540,6 +609,12 @@ def main():
     compare_parser.add_argument('--days', type=int, default=90, help='Number of past days to include [default: 90]')
     compare_parser.add_argument('--directory', help='Directory to search for workout files')
     
+    # Health Stats command
+    health_stats_parser = subparsers.add_parser('health_stats', help='Download daily health statistics from Garmin Connect')
+    health_stats_parser.add_argument('--date', help='Specific date in YYYY-MM-DD format (defaults to yesterday)')
+    health_stats_parser.add_argument('--days', type=int, default=1, help='Number of days to download (starting from date) [default: 1]')
+    health_stats_parser.add_argument('--non-interactive', action='store_true', help='Run in non-interactive mode (no prompts)')
+    
     # Parse arguments
     args = parser.parse_args()
     
@@ -556,6 +631,8 @@ def main():
         success = latest_command(args)
     elif args.command == 'compare':
         success = compare_command(args)
+    elif args.command == 'health_stats':
+        success = health_stats_command(args)
     else:
         parser.print_help()
         return 1

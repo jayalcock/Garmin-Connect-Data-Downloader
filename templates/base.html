@@ -112,6 +112,9 @@
                         <a class="nav-link {% if request.path.startswith('/compare') %}active{% endif %}" href="{{ url_for('compare') }}">Compare</a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link {% if request.path.startswith('/health_stats') %}active{% endif %}" href="{{ url_for('health_stats') }}">Health Stats</a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link {% if request.path.startswith('/results') %}active{% endif %}" href="{{ url_for('results') }}">Results</a>
                     </li>
                 </ul>

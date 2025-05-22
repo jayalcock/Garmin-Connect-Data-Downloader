@@ -17,18 +17,29 @@
 </div>
 
 <div class="row g-4 py-5">
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="card h-100">
             <div class="card-body text-center">
                 <i class="bi bi-cloud-download feature-icon"></i>
-                <h2 class="card-title">Download</h2>
-                <p class="card-text">Download your activities directly from Garmin Connect in FIT, TCX, or GPX format.</p>
+                <h2 class="card-title">Activities</h2>
+                <p class="card-text">Download your workouts directly from Garmin Connect in FIT, TCX, or GPX format.</p>
                 <a href="{{ url_for('download') }}" class="btn btn-primary">Download Activities</a>
             </div>
         </div>
     </div>
     
-    <div class="col-md-4">
+    <div class="col-md-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-heart-pulse feature-icon"></i>
+                <h2 class="card-title">Health Stats</h2>
+                <p class="card-text">Download daily health statistics like steps, heart rate, sleep data, and more.</p>
+                <a href="{{ url_for('health_stats') }}" class="btn btn-primary">Health Stats</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
         <div class="card h-100">
             <div class="card-body text-center">
                 <i class="bi bi-gear-wide-connected feature-icon"></i>
@@ -39,12 +50,12 @@
         </div>
     </div>
     
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="card h-100">
             <div class="card-body text-center">
                 <i class="bi bi-bar-chart feature-icon"></i>
                 <h2 class="card-title">Analyze</h2>
-                <p class="card-text">Get detailed analysis of your workouts with advanced charts and ChatGPT-ready summaries.</p>
+                <p class="card-text">Get detailed analysis of your workouts with charts and ChatGPT-ready summaries.</p>
                 <a href="{{ url_for('analyze') }}" class="btn btn-primary">Analyze Workout</a>
             </div>
         </div>
