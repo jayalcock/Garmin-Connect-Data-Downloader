@@ -1,0 +1,18 @@
+services:
+  garmin-analyzer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: garmin-workout-analyzer
+    ports:
+      - "8080:5000"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./exports:/app/exports
+      - ./web_results:/app/web_results
+    environment:
+      - FLASK_APP=web_app.py
+      - FLASK_ENV=production
+      - SECRET_KEY=change-this-to-a-secure-key
+    restart: unless-stopped

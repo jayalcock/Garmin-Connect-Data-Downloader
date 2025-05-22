@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block title %}View Result{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">{{ result.title }}</h4>
+                        <div>
+                            <a href="{{ url_for('results') }}" class="btn btn-light btn-sm">Back to Results</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <strong>Date:</strong> {{ result.created_at }}
+                            </div>
+                            <div class="mb-3">
+                                <strong>Type:</strong> 
+                                <span class="badge bg-{{ result.type_color }}">{{ result.type }}</span>
+                            </div>
+                            <div class="mb-3">
+                                <strong>Result Type:</strong> {{ result.result_type }}
+                            </div>
+                            {% if result.metadata %}
+                                <div class="mb-3">
+                                    <strong>Duration:</strong> {{ result.metadata.duration }}
+                                </div>
+                                <div class="mb-3">
+                                    <strong>Distance:</strong> {{ result.metadata.distance }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            {% if result.metadata and (result.metadata.avg_hr or result.metadata.max_hr or result.metadata.calories) %}
+                                <div class="card h-100">
+                                    <div class="card-header">Key Metrics</div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            {% if result.metadata.avg_hr %}
+                                                <div class="col-6">
+                                                    <div class="text-center">
+                                                        <h6>Avg Heart Rate</h6>
+                                                        <h3>{{ result.metadata.avg_hr }} <small>bpm</small></h3>
+                                                    </div>
+                                                </div>
+                                            {% endif %}
+                                            {% if result.metadata.max_hr %}
+                                                <div class="col-6">
+                                                    <div class="text-center">
+                                                        <h6>Max Heart Rate</h6>
+                                                        <h3>{{ result.metadata.max_hr }} <small>bpm</small></h3>
+                                                    </div>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="row mt-3">
+                                            {% if result.metadata.avg_pace %}
+                                                <div class="col-6">
+                                                    <div class="text-center">
+                                                        <h6>Avg Pace</h6>
+                                                        <h3>{{ result.metadata.avg_pace }}</h3>
+                                                    </div>
+                                                </div>
+                                            {% endif %}
+                                            {% if result.metadata.calories %}
+                                                <div class="col-6">
+                                                    <div class="text-center">
+                                                        <h6>Calories</h6>
+                                                        <h3>{{ result.metadata.calories }}</h3>
+                                                    </div>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    {% if result.summary %}
+                        <div class="row">
+                            <div class="col-md-12 mb-4">
+                                <div class="card">
+                                    <div class="card-header">Workout Summary</div>
+                                    <div class="card-body">
+                                        <pre class="bg-light p-3 rounded">{{ result.summary }}</pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    {% if result.charts %}
+                        <h5 class="mt-4 mb-3">Visualizations</h5>
+                        <div class="row">
+                            {% for chart in result.charts %}
+                                <div class="col-md-6 mb-4">
+                                    <div class="card">
+                                        <div class="card-header">{{ chart.title }}</div>
+                                        <div class="card-body text-center">
+                                            <img src="{{ chart.url }}" alt="{{ chart.title }}" class="img-fluid rounded">
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    
+                    {% if result.data_preview %}
+                        <h5 class="mt-4 mb-3">Data Preview</h5>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped">
+                                <thead>
+                                    <tr>
+                                        {% for header in result.data_preview.headers %}
+                                            <th>{{ header }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in result.data_preview.rows %}
+                                        <tr>
+                                            {% for cell in row %}
+                                                <td>{{ cell }}</td>
+                                            {% endfor %}
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <p class="text-muted small">Showing first {{ result.data_preview.rows|length }} rows of data.</p>
+                    {% endif %}
+                    
+                    <div class="mt-4">
+                        <h5 class="mb-3">Download Options</h5>
+                        <div class="btn-group">
+                            {% if result.files.csv %}
+                                <a href="{{ url_for('download_result', result_id=result.id, file_type='csv') }}" class="btn btn-outline-primary">
+                                    <i class="bi bi-file-earmark-spreadsheet"></i> Download CSV
+                                </a>
+                            {% endif %}
+                            {% if result.files.fit %}
+                                <a href="{{ url_for('download_result', result_id=result.id, file_type='fit') }}" class="btn btn-outline-primary">
+                                    <i class="bi bi-file-earmark-binary"></i> Download FIT
+                                </a>
+                            {% endif %}
+                            {% if result.files.summary %}
+                                <a href="{{ url_for('download_result', result_id=result.id, file_type='summary') }}" class="btn btn-outline-primary">
+                                    <i class="bi bi-file-earmark-text"></i> Download Summary
+                                </a>
+                            {% endif %}
+                            {% if result.files.chatgpt %}
+                                <a href="{{ url_for('download_result', result_id=result.id, file_type='chatgpt') }}" class="btn btn-outline-primary">
+                                    <i class="bi bi-chat"></i> ChatGPT Format
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <small class="text-muted">Created: {{ result.created_at }}</small>
+                        </div>
+                        <div>
+                            <a href="{{ url_for('delete_result', result_id=result.id) }}" 
+                               class="btn btn-sm btn-danger"
+                               onclick="return confirm('Are you sure you want to delete this result?');">
+                                <i class="bi bi-trash"></i> Delete Result
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

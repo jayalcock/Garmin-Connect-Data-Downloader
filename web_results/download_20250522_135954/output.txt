@@ -1,0 +1,1 @@
+Could not import garmin_sync.py. Make sure it's in the same directory.

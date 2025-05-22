@@ -1,0 +1,111 @@
+/* Custom Styling for Garmin Workout Analyzer Web Interface */
+
+/* Main layout customizations */
+body {
+    background-color: #f8f9fa;
+    padding-bottom: 40px;
+}
+
+.navbar-brand {
+    font-weight: bold;
+}
+
+.app-header {
+    background-color: #e9ecef;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+}
+
+/* Card enhancements */
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.card-header {
+    font-weight: 600;
+}
+
+/* Chart containers */
+.chart-container {
+    background-color: #fff;
+    border-radius: 0.25rem;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.chart-container img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Data tables */
+.table-responsive {
+    border-radius: 0.25rem;
+    overflow: hidden;
+}
+
+/* Form styling */
+.form-control:focus, .form-select:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.25rem rgba(0, 123, 255, 0.25);
+}
+
+/* Button styles */
+.btn-primary {
+    background-color: #0062cc;
+    border-color: #005cbf;
+}
+
+.btn-primary:hover {
+    background-color: #0069d9;
+    border-color: #0062cc;
+}
+
+/* Results page */
+.results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.metric-card {
+    text-align: center;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 0.25rem;
+    background-color: #f8f9fa;
+}
+
+.metric-card h3 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 0;
+}
+
+.metric-card h6 {
+    color: #6c757d;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Summary text */
+pre.workout-summary {
+    background-color: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 0.25rem;
+    white-space: pre-wrap;
+    font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 0.875rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 767.98px) {
+    .card-body {
+        padding: 1rem;
+    }
+    
+    h4.mb-0 {
+        font-size: 1.25rem;
+    }
+}

@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+
+{% block title %}Analysis Results - Garmin Workout Analyzer{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h1 class="h4 mb-0">Workout Analysis Results</h1>
+                <span class="badge bg-{% if success %}success{% else %}danger{% endif %}">
+                    {% if success %}Success{% else %}Failed{% endif %}
+                </span>
+            </div>
+            <div class="card-body">
+                {% if success %}
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle-fill"></i> 
+                        Workout analysis completed successfully!
+                    </div>
+                    
+                    {% if analysis_content %}
+                        <div class="mb-4">
+                            <h2 class="h5 mb-3">Workout Analysis</h2>
+                            <div class="markdown-content">
+                                {{ analysis_content|safe }}
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="mb-4">
+                        <h2 class="h5">What's Next?</h2>
+                        <div class="list-group">
+                            <a href="{{ url_for('compare') }}" class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h5 class="mb-1">Compare With Other Workouts</h5>
+                                    <small><i class="bi bi-arrow-right"></i></small>
+                                </div>
+                                <p class="mb-1">See how this workout compares to your other workouts</p>
+                            </a>
+                            <a href="{{ url_for('download') }}" class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h5 class="mb-1">Download More Activities</h5>
+                                    <small><i class="bi bi-arrow-right"></i></small>
+                                </div>
+                                <p class="mb-1">Download more workouts from Garmin Connect</p>
+                            </a>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle-fill"></i> 
+                        Failed to analyze the workout. Please check the output below for details.
+                    </div>
+                {% endif %}
+                
+                <h2 class="h5 mb-3">Command Output</h2>
+                <div class="bg-dark text-light p-3 rounded" style="max-height: 400px; overflow-y: auto;">
+                    <pre class="mb-0">{{ output }}</pre>
+                </div>
+                
+                <div class="mt-4">
+                    <h2 class="h5 mb-3">Result Files</h2>
+                    
+                    {% if success %}
+                        <p>
+                            The analysis files are available in the results directory: 
+                            <code>{{ result_dir }}</code>
+                        </p>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-center mt-4">
+                            <a href="{{ url_for('view_result', result_dir=result_dir) }}" class="btn btn-primary">
+                                <i class="bi bi-folder2-open"></i> View Results
+                            </a>
+                            <a href="{{ url_for('analyze') }}" class="btn btn-outline-primary">
+                                <i class="bi bi-file-earmark-plus"></i> Analyze Another Workout
+                            </a>
+                        </div>
+                    {% else %}
+                        <p>No result files were generated due to the error.</p>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-center mt-4">
+                            <a href="{{ url_for('analyze') }}" class="btn btn-primary">
+                                <i class="bi bi-arrow-counterclockwise"></i> Try Again
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

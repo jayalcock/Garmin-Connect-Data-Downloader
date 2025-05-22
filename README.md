@@ -2,6 +2,16 @@
 
 This project allows you to automatically download your health and fitness data from Garmin Connect, save it as CSV files, and analyze your workouts. It includes comprehensive visualization tools and ChatGPT integration for detailed workout analysis.
 
+## Features
+
+- **Download** activities from Garmin Connect
+- **Process** FIT files to CSV format with detailed metrics
+- **Visualize** workout data with charts and graphs
+- **Analyze** workouts with detailed metrics and insights
+- **Compare** multiple workouts over time
+- **Web Interface** for easy access to all functionality
+- **Docker Support** for simplified deployment
+
 ## Project Structure
 
 ```
@@ -13,12 +23,137 @@ Data download/
 ├── download_today.sh       # Shell script to download today's activities
 ├── analyze_workout.py      # CLI tool for analyzing workout data with ChatGPT
 ├── setup.py                # Python package setup file
+├── garmin_cli.py           # Unified CLI tool for all functionality
+├── web_app.py              # Web interface using Flask
+├── Dockerfile              # Docker container definition
+├── docker-compose.yml      # Docker Compose configuration for easy deployment
+├── requirements.txt        # Python dependencies
+├── templates/              # HTML templates for web interface
+├── static/                 # Static files (CSS, JS, images)
 ├── docs/                   # Documentation directory
 │   ├── APP_PASSWORD_GUIDE.md    # Instructions for setting up app passwords
 │   ├── BACKUP_LOCATION_CHANGES.md # Information on backup location changes
 │   ├── CHANGELOG.md       # Project changelog
 │   ├── OPENAI_INTEGRATION.md # Guide for using the OpenAI integration
 │   └── README.md          # Additional documentation
+
+## Web Interface
+
+This project now includes a web interface that makes it easy to use all the functionality without needing to use the command line.
+
+### Features
+
+- Download activities from Garmin Connect
+- Process FIT files with visualization options
+- Analyze workouts for detailed metrics
+- Compare multiple workouts over time
+- View your latest workout
+- Browse previous analysis results
+
+## Docker Installation
+
+### Prerequisites
+
+- Docker and Docker Compose installed on your system
+
+### Quick Start with Docker
+
+1. Clone this repository:
+```bash
+git clone <repository-url>
+cd "Garmin Apps/Data download"
+```
+
+2. Build and start the Docker container:
+```bash
+docker-compose up -d
+```
+
+3. Access the web interface at:
+```
+http://localhost:8080
+```
+
+### Configuration
+
+Edit the `docker-compose.yml` file to change:
+- Port mapping (default: 8080)
+- Volume mounts for data persistence
+- Environment variables
+
+## Manual Installation
+
+### Prerequisites
+
+- Python 3.8 or higher
+- Required Python packages (see requirements.txt)
+
+### Setup
+
+1. Clone this repository:
+```bash
+git clone <repository-url>
+cd "Garmin Apps/Data download"
+```
+
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+3. Run the web application:
+```bash
+python web_app.py
+```
+
+4. Access the web interface at:
+```
+http://localhost:5000
+```
+
+## Using the Web Interface
+
+### Download Activities
+1. Navigate to the Download page
+2. Enter your Garmin Connect credentials (these are not stored)
+3. Select the number of days to download
+4. Click "Download Activities"
+
+### Process FIT Files
+1. Navigate to the Process page
+2. Upload a FIT file
+3. Select options for charts and summary
+4. Click "Process File" 
+
+### Analyze Workouts
+1. Navigate to the Analyze page
+2. Upload a FIT or CSV file
+3. Select visualization options
+4. Click "Analyze File"
+
+### Compare Workouts
+1. Navigate to the Compare page
+2. Select sport type and date range
+3. Click "Compare Workouts"
+
+### Latest Workout
+1. Navigate to the Latest page
+2. Select options
+3. Click "Get Latest Workout"
+
+## CLI Usage
+
+You can still use the command-line interface:
+
+```bash
+python garmin_cli.py download --days=7
+python garmin_cli.py process my_activity.fit --charts
+python garmin_cli.py analyze my_activity.fit
+python garmin_cli.py compare --sport=running --days=30
+python garmin_cli.py latest --charts
+```
+
+See `python garmin_cli.py --help` for more options.
 ├── src/                     # Source code directory
 │   ├── __init__.py          # Package init file
 │   ├── daily_export.py      # Daily automated export script

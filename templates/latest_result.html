@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}Latest Workout Results{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">Latest Workout Analysis</h4>
+                        <a href="{{ url_for('latest') }}" class="btn btn-light btn-sm">Refresh Latest</a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if error %}
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle-fill"></i> {{ error }}
+                        </div>
+                        <p>Possible reasons:</p>
+                        <ul>
+                            <li>You need to authenticate to Garmin Connect</li>
+                            <li>No new workouts available since last download</li>
+                            <li>Network or API connectivity issues</li>
+                        </ul>
+                    {% else %}
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <h5 class="card-title">{{ workout_title }}</h5>
+                                <h6 class="card-subtitle mb-2 text-muted">{{ workout_date }}</h6>
+                                
+                                <div class="mt-3">
+                                    <span class="badge bg-primary">{{ workout_type }}</span>
+                                    <span class="badge bg-secondary">{{ workout_duration }}</span>
+                                    <span class="badge bg-info">{{ workout_distance }}</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card h-100">
+                                    <div class="card-header">Key Metrics</div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-6">
+                                                <div class="text-center">
+                                                    <h6>Avg Heart Rate</h6>
+                                                    <h3>{{ avg_hr }} <small>bpm</small></h3>
+                                                </div>
+                                            </div>
+                                            <div class="col-6">
+                                                <div class="text-center">
+                                                    <h6>Max Heart Rate</h6>
+                                                    <h3>{{ max_hr }} <small>bpm</small></h3>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row mt-3">
+                                            <div class="col-6">
+                                                <div class="text-center">
+                                                    <h6>Avg Pace</h6>
+                                                    <h3>{{ avg_pace }}</h3>
+                                                </div>
+                                            </div>
+                                            <div class="col-6">
+                                                <div class="text-center">
+                                                    <h6>Calories</h6>
+                                                    <h3>{{ calories }}</h3>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-12 mb-4">
+                                <div class="card">
+                                    <div class="card-header">Workout Summary</div>
+                                    <div class="card-body">
+                                        <pre class="bg-light p-3 rounded">{{ workout_summary }}</pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if charts %}
+                            <h5 class="mt-4 mb-3">Visualizations</h5>
+                            <div class="row">
+                                {% for chart in charts %}
+                                    <div class="col-md-6 mb-4">
+                                        <div class="card">
+                                            <div class="card-header">{{ chart.title }}</div>
+                                            <div class="card-body text-center">
+                                                <img src="{{ chart.url }}" alt="{{ chart.title }}" class="img-fluid rounded">
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        
+                        <div class="mt-4">
+                            <h5 class="mb-3">Download Options</h5>
+                            <div class="btn-group">
+                                <a href="{{ url_for('download_result', result_id=result_id, file_type='csv') }}" class="btn btn-outline-primary">
+                                    <i class="bi bi-file-earmark-spreadsheet"></i> Download CSV
+                                </a>
+                                <a href="{{ url_for('download_result', result_id=result_id, file_type='fit') }}" class="btn btn-outline-primary">
+                                    <i class="bi bi-file-earmark-binary"></i> Download FIT
+                                </a>
+                                <a href="{{ url_for('download_result', result_id=result_id, file_type='summary') }}" class="btn btn-outline-primary">
+                                    <i class="bi bi-file-earmark-text"></i> Download Summary
+                                </a>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
