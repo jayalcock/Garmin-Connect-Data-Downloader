@@ -7,7 +7,8 @@ services:
     ports:
       - "8080:5000"
     volumes:
-      - ./data:/app/data
+      - .:/app
+      - ./data:/app/data 
       - ./logs:/app/logs
       - ./exports:/app/exports
       - ./web_results:/app/web_results

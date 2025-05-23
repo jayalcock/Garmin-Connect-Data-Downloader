@@ -56,10 +56,55 @@ def download_command(args):
     """Download activities from Garmin Connect"""
     # Import dependencies
     try:
+        # Add paths to search for modules - for Docker and local dev
+        current_dir = os.path.dirname(os.path.realpath(__file__))
+        # Make sure current directory is in path
+        if current_dir not in sys.path:
+            sys.path.insert(0, current_dir)
+        # Add parent dir for good measure
+        parent_dir = os.path.dirname(current_dir)
+        if parent_dir not in sys.path:
+            sys.path.append(parent_dir)
+        
+        # Print debugging info about paths
+        print(f"Python path in garmin_cli: {sys.path}")
+        print(f"Current directory in garmin_cli: {current_dir}")
+        print(f"Files in current directory: {os.listdir(current_dir)}")
+        
+        # Try direct import first
         from garmin_sync import connect_to_garmin, download_activity_file, download_activities, download_today_activities
-    except ImportError:
-        print("Could not import garmin_sync.py. Make sure it's in the same directory.")
-        return False
+        print("Successfully imported garmin_sync with direct import")
+    except ImportError as e:
+        print(f"Error importing garmin_sync directly: {e}")
+        try:
+            # Try with absolute path
+            import garmin_sync
+            connect_to_garmin = garmin_sync.connect_to_garmin
+            download_activity_file = garmin_sync.download_activity_file
+            download_activities = garmin_sync.download_activities
+            download_today_activities = garmin_sync.download_today_activities
+            print("Successfully imported garmin_sync with absolute import")
+        except ImportError as e:
+            print(f"Could not import garmin_sync.py. Make sure it's in the same directory. Error: {e}")
+            
+            # Last resort - try loading the module directly from a file
+            try:
+                import importlib.util
+                spec = importlib.util.spec_from_file_location("garmin_sync", os.path.join(current_dir, "garmin_sync.py"))
+                if spec and spec.loader:
+                    garmin_sync = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(garmin_sync)
+                    connect_to_garmin = garmin_sync.connect_to_garmin
+                    download_activity_file = garmin_sync.download_activity_file
+                    download_activities = garmin_sync.download_activities
+                    download_today_activities = garmin_sync.download_today_activities
+                    print("Successfully imported garmin_sync using direct file loading")
+                else:
+                    print("Failed to create module spec for garmin_sync.py")
+                    return False
+            except Exception as e:
+                print(f"All import methods failed. Error: {e}")
+                return False
 
     # Connect to Garmin
     client = connect_to_garmin()

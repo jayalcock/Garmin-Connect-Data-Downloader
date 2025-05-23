@@ -21,6 +21,7 @@ RUN mkdir -p exports/activities exports/chatgpt_ready
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 ENV FLASK_APP=web_app.py
+ENV PYTHONPATH=/app
 
 # Expose the port the app will run on
 EXPOSE 5000

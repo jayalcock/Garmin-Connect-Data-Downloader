@@ -47,13 +47,40 @@ RESULTS_DIR.mkdir(exist_ok=True)
 
 # Import garmin_cli functionality
 try:
-    sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+    # Add paths to search for modules - for Docker and local dev
+    current_dir = os.path.dirname(os.path.realpath(__file__))
+    # Make sure current directory is in path
+    if current_dir not in sys.path:
+        sys.path.insert(0, current_dir)
+    # Add parent dir for good measure
+    parent_dir = os.path.dirname(current_dir)
+    if parent_dir not in sys.path:
+        sys.path.append(parent_dir)
+    
+    # Print debugging info about paths
+    print(f"Python path: {sys.path}")
+    print(f"Current directory: {current_dir}")
+    print(f"Files in current directory: {os.listdir(current_dir)}")
+    
+    # First try direct import
     from garmin_cli import (
         download_command, process_command, analyze_command, latest_command, compare_command
     )
+    print("Successfully imported garmin_cli with direct import")
 except ImportError as e:
-    print(f"Error importing garmin_cli: {e}")
-    sys.exit(1)
+    print(f"Error importing garmin_cli directly: {e}")
+    try:
+        # Try with absolute import
+        import garmin_cli
+        download_command = garmin_cli.download_command
+        process_command = garmin_cli.process_command
+        analyze_command = garmin_cli.analyze_command
+        latest_command = garmin_cli.latest_command
+        compare_command = garmin_cli.compare_command
+        print("Successfully imported garmin_cli with absolute import")
+    except ImportError as e2:
+        print(f"Error with absolute import: {e2}")
+        sys.exit(1)
 
 # Forms
 class DownloadForm(FlaskForm):
