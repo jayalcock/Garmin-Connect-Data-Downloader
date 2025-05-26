@@ -12,9 +12,39 @@ cd "$SCRIPT_DIR" || { echo "Error: Failed to change directory"; exit 1; }
 
 # Define a function to handle the Python script interaction
 download_activities() {
-    # Use expect to handle the interaction with the Python script
-    expect << EOD
-spawn python3 -c 'import sys; sys.path.append("."); from garmin_sync import connect_to_garmin, download_today_activities; client = connect_to_garmin(allow_mfa=True); download_today_activities(client, "ORIGINAL") if client else print("Failed to connect to Garmin Connect")'
+    # Determine which Python executable to use
+    PYTHON_EXEC=${PYTHON_PATH:-python3}
+    echo "Using Python: ${PYTHON_EXEC}"
+
+    # Check if Python executable exists and is executable before running
+    if [ ! -x "$PYTHON_EXEC" ] && [ "$PYTHON_EXEC" != "python3" ]; then
+        echo "× Error: The Python executable '$PYTHON_EXEC' does not exist or is not executable!"
+        echo "Trying system Python as fallback..."
+        PYTHON_EXEC="python3"
+    fi
+    
+    # Check if the 'expect' command is available
+    if ! command -v expect &> /dev/null; then
+        echo "The 'expect' command is not installed. Using alternate method."
+        echo "Email: $GARMIN_EMAIL"
+        echo "Password: [hidden]"
+        echo "Save credentials: n"
+        
+        # Use a temporary file to hold the responses
+        RESP_FILE=$(mktemp)
+        echo "$GARMIN_EMAIL" > "$RESP_FILE"
+        echo "$GARMIN_PASSWORD" >> "$RESP_FILE"
+        echo "n" >> "$RESP_FILE"
+        
+        # Run Python with input from the response file - using double quotes for better string handling
+        $PYTHON_EXEC -c "import sys; sys.path.append('.'); from garmin_sync import connect_to_garmin, download_today_activities; client = connect_to_garmin(allow_mfa=True); download_today_activities(client, 'ORIGINAL') if client else print('Failed to connect to Garmin Connect')" < "$RESP_FILE"
+        
+        # Remove the temporary file
+        rm -f "$RESP_FILE"
+    else
+        # Use expect to handle the interaction with the Python script
+        expect << EOD
+spawn $PYTHON_EXEC -c "import sys; sys.path.append('.'); from garmin_sync import connect_to_garmin, download_today_activities; client = connect_to_garmin(allow_mfa=True); download_today_activities(client, 'ORIGINAL') if client else print('Failed to connect to Garmin Connect')"
 expect "Enter your Garmin Connect email: "
 send "$GARMIN_EMAIL\r"
 expect "Enter your Garmin Connect password: "
@@ -23,6 +53,7 @@ expect "Save credentials for future use? (y/n): "
 send "n\r"
 interact
 EOD
+    fi
 }
 
 # Check if environment variables are set
@@ -34,7 +65,13 @@ else
     if [ -f "$HOME/.garmin_config.json" ]; then
         echo "Using saved credentials from ~/.garmin_config.json"
         # Use the Python script with saved credentials in non-interactive mode
-        python3 -c 'import sys; sys.path.append("."); from garmin_sync import connect_to_garmin, download_today_activities; client = connect_to_garmin(non_interactive=True, allow_mfa=False); download_today_activities(client, "ORIGINAL") if client else print("Failed to connect to Garmin Connect")'
+        # Double-check Python executable before running
+        if [ ! -x "$PYTHON_EXEC" ] && [ "$PYTHON_EXEC" != "python3" ]; then
+            echo "× Error: The Python executable '$PYTHON_EXEC' does not exist or is not executable!"
+            echo "Trying system Python as fallback..."
+            PYTHON_EXEC="python3"
+        fi
+        $PYTHON_EXEC -c "import sys; sys.path.append('.'); from garmin_sync import connect_to_garmin, download_today_activities; client = connect_to_garmin(non_interactive=True, allow_mfa=False); download_today_activities(client, 'ORIGINAL') if client else print('Failed to connect to Garmin Connect')"
     else
         echo "Error: Garmin credentials not found."
         echo "Please either:"
