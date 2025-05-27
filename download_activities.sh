@@ -89,16 +89,35 @@ mkdir -p "$NEXTCLOUD_PATH"
 mkdir -p "$ACTIVITIES_PATH"
 mkdir -p "$CSV_PATH"
 
-# Copy downloaded files to Nextcloud
+# Copy only new files to Nextcloud
 EXPORTS_DIR="./exports"
 if [ -d "$EXPORTS_DIR" ]; then
-    echo "Copying FIT files to Nextcloud activities folder: $ACTIVITIES_PATH"
-    cp "$EXPORTS_DIR/activities"/*.fit "$ACTIVITIES_PATH" 2>/dev/null || echo "No FIT files to copy."
-    echo "Copying JSON files to Nextcloud folder: $NEXTCLOUD_PATH"
-    cp "$EXPORTS_DIR"/*.json "$NEXTCLOUD_PATH" 2>/dev/null || echo "No JSON files to copy."
-    echo "Copying CSV files to Nextcloud CSV folder: $CSV_PATH"
-    cp "$EXPORTS_DIR"/*.csv "$CSV_PATH" 2>/dev/null || echo "No health CSV files to copy."
-    cp "$EXPORTS_DIR/activities"/*.csv "$CSV_PATH" 2>/dev/null || echo "No activity CSV files to copy."
+    echo "Copying new FIT files to Nextcloud activities folder: $ACTIVITIES_PATH"
+    for file in "$EXPORTS_DIR/activities"/*.fit 2>/dev/null; do
+        [ -f "$file" ] || continue
+        filename=$(basename "$file")
+        if [ ! -f "$ACTIVITIES_PATH/$filename" ]; then
+            cp "$file" "$ACTIVITIES_PATH/" && echo "  ✓ Copied: $filename"
+        fi
+    done
+    
+    echo "Copying new JSON files to Nextcloud folder: $NEXTCLOUD_PATH"
+    for file in "$EXPORTS_DIR"/*.json 2>/dev/null; do
+        [ -f "$file" ] || continue
+        filename=$(basename "$file")
+        if [ ! -f "$NEXTCLOUD_PATH/$filename" ]; then
+            cp "$file" "$NEXTCLOUD_PATH/" && echo "  ✓ Copied: $filename"
+        fi
+    done
+    
+    echo "Copying new CSV files to Nextcloud CSV folder: $CSV_PATH"
+    for file in "$EXPORTS_DIR"/*.csv "$EXPORTS_DIR/activities"/*.csv 2>/dev/null; do
+        [ -f "$file" ] || continue
+        filename=$(basename "$file")
+        if [ ! -f "$CSV_PATH/$filename" ]; then
+            cp "$file" "$CSV_PATH/" && echo "  ✓ Copied: $filename"
+        fi
+    done
 else
     echo "No exports directory found."
 fi

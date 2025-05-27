@@ -175,6 +175,38 @@ copy_to_desktop() {
     echo "A diagnostic report has been saved to $DESKTOP_FOLDER/download_diagnostic.txt"
 }
 
+# Also copy to Nextcloud using new-files-only logic
+copy_to_nextcloud() {
+    # Define Nextcloud export directory
+    NEXTCLOUD_PATH="$HOME/Nextcloud/GarminExports"
+    CSV_PATH="$NEXTCLOUD_PATH/csv"
+    mkdir -p "$NEXTCLOUD_PATH"
+    mkdir -p "$CSV_PATH"
+    
+    echo ""
+    echo "===== Copying to Nextcloud ====="
+    
+    # Copy only new JSON files to Nextcloud
+    echo "Copying new health JSON files to Nextcloud folder: $NEXTCLOUD_PATH"
+    for file in "./exports"/garmin_stats_*_raw.json 2>/dev/null; do
+        [ -f "$file" ] || continue
+        filename=$(basename "$file")
+        if [ ! -f "$NEXTCLOUD_PATH/$filename" ]; then
+            cp "$file" "$NEXTCLOUD_PATH/" && echo "  ✓ Copied: $filename"
+        fi
+    done
+    
+    # Copy only new CSV files to Nextcloud
+    echo "Copying new health CSV files to Nextcloud CSV folder: $CSV_PATH"
+    for file in "./exports"/*.csv 2>/dev/null; do
+        [ -f "$file" ] || continue
+        filename=$(basename "$file")
+        if [ ! -f "$CSV_PATH/$filename" ]; then
+            cp "$file" "$CSV_PATH/" && echo "  ✓ Copied: $filename"
+        fi
+    done
+}
+
 echo "===== Garmin Health Data Downloader ====="
 echo "This script will download your latest health data from Garmin Connect"
 echo "and save it to your Desktop for easy access."
