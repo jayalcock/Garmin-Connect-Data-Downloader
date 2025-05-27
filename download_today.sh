@@ -18,7 +18,13 @@ if [ -d "venv" ]; then
     echo "Activated virtual environment"
 fi
 
+# Define Nextcloud export directory
+NEXTCLOUD_PATH="$HOME/Nextcloud/GarminExports"
+mkdir -p "$NEXTCLOUD_PATH"
+
 # Run the garmin_sync script with the today's activities option
+# Download to exports/ as usual, then move to Nextcloud
+
 echo "Downloading today's activities..."
 python3 -c "
 import sys
@@ -32,5 +38,14 @@ client = connect_to_garmin(non_interactive=True)
 if client:
     download_today_activities(client, 'ORIGINAL')
 "
+
+# Move downloaded FIT files to Nextcloud
+EXPORTS_DIR="./exports"
+if [ -d "$EXPORTS_DIR" ]; then
+    echo "Moving FIT files to Nextcloud folder: $NEXTCLOUD_PATH"
+    mv "$EXPORTS_DIR"/*.fit "$NEXTCLOUD_PATH" 2>/dev/null || echo "No FIT files to move."
+else
+    echo "No exports directory found."
+fi
 
 echo "\nFinished downloading today's activities."
