@@ -1,5 +1,0 @@
-
-===== Downloading Health Statistics from Garmin Connect =====
-
-Error: Non-interactive mode requires saved credentials
-Failed to connect to Garmin Connect. Aborting.

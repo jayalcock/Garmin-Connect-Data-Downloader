@@ -12,16 +12,11 @@ We've addressed multiple issues with the Garmin data download scripts:
 ## Files Changed
 
 ### Core Script Fixes
-1. **download_fit_activities.sh**
-   - Changed single quotes to double quotes for Python commands
-   - Added proper Python path handling with `${PYTHON_PATH:-python3}`
-   - Added Python executable existence checks before running
-
-2. **download_activities.sh**
+1. **download_activities.sh**
    - Verified proper Python path handling
    - Already using correct quotes for Python commands
 
-3. **download_health_data.sh**
+2. **download_health_data.sh**
    - Verified proper Python path handling and date fallback logic
 
 ### New Scripts Created

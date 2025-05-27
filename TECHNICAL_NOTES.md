@@ -9,13 +9,11 @@ The download system consists of several key components:
 ### Core Scripts
 1. `download_health_data.sh` - Downloads health metrics data
 2. `download_activities.sh` - Downloads activity summaries
-3. `download_fit_activities.sh` - Downloads original FIT files for activities
 
 ### Desktop Shortcuts
 1. `Download Garmin Health Data.command` - Executes health data download
 2. `Download Garmin Activities.command` - Executes activities download
-3. `Download Garmin FIT Activities.command` - Executes FIT file download
-4. `Garmin Activities Diagnostic.command` - Runs diagnostic tools
+3. `Garmin Activities Diagnostic.command` - Runs diagnostic tools
 
 ## Fixes Implemented
 
