@@ -20,7 +20,9 @@ fi
 
 # Define Nextcloud export directory
 NEXTCLOUD_PATH="$HOME/Nextcloud/GarminExports"
+CSV_PATH="$NEXTCLOUD_PATH/csv"
 mkdir -p "$NEXTCLOUD_PATH"
+mkdir -p "$CSV_PATH"
 
 # Run the garmin_sync script with the today's activities option
 # Download to exports/ as usual, then move to Nextcloud
@@ -43,7 +45,12 @@ if client:
 EXPORTS_DIR="./exports"
 if [ -d "$EXPORTS_DIR" ]; then
     echo "Moving FIT files to Nextcloud folder: $NEXTCLOUD_PATH"
-    mv "$EXPORTS_DIR"/*.fit "$NEXTCLOUD_PATH" 2>/dev/null || echo "No FIT files to move."
+    mv "$EXPORTS_DIR/activities"/*.fit "$NEXTCLOUD_PATH" 2>/dev/null || echo "No FIT files to move."
+    echo "Copying JSON files to Nextcloud folder: $NEXTCLOUD_PATH"
+    cp "$EXPORTS_DIR"/*.json "$NEXTCLOUD_PATH" 2>/dev/null || echo "No JSON files to copy."
+    echo "Copying CSV files to Nextcloud CSV folder: $CSV_PATH"
+    cp "$EXPORTS_DIR"/*.csv "$CSV_PATH" 2>/dev/null || echo "No health CSV files to copy."
+    cp "$EXPORTS_DIR/activities"/*.csv "$CSV_PATH" 2>/dev/null || echo "No activity CSV files to copy."
 else
     echo "No exports directory found."
 fi

@@ -81,4 +81,26 @@ else
     fi
 fi
 
+# Define Nextcloud export directory and activities subfolder
+NEXTCLOUD_PATH="$HOME/Nextcloud/GarminExports"
+ACTIVITIES_PATH="$NEXTCLOUD_PATH/activities"
+CSV_PATH="$NEXTCLOUD_PATH/csv"
+mkdir -p "$NEXTCLOUD_PATH"
+mkdir -p "$ACTIVITIES_PATH"
+mkdir -p "$CSV_PATH"
+
+# Copy downloaded files to Nextcloud
+EXPORTS_DIR="./exports"
+if [ -d "$EXPORTS_DIR" ]; then
+    echo "Copying FIT files to Nextcloud activities folder: $ACTIVITIES_PATH"
+    cp "$EXPORTS_DIR/activities"/*.fit "$ACTIVITIES_PATH" 2>/dev/null || echo "No FIT files to copy."
+    echo "Copying JSON files to Nextcloud folder: $NEXTCLOUD_PATH"
+    cp "$EXPORTS_DIR"/*.json "$NEXTCLOUD_PATH" 2>/dev/null || echo "No JSON files to copy."
+    echo "Copying CSV files to Nextcloud CSV folder: $CSV_PATH"
+    cp "$EXPORTS_DIR"/*.csv "$CSV_PATH" 2>/dev/null || echo "No health CSV files to copy."
+    cp "$EXPORTS_DIR/activities"/*.csv "$CSV_PATH" 2>/dev/null || echo "No activity CSV files to copy."
+else
+    echo "No exports directory found."
+fi
+
 echo "Done!"
