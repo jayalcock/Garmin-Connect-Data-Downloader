@@ -84,9 +84,8 @@ fi
 
 Several diagnostic tools were added to help troubleshoot download issues:
 
-1. **quick_data_check.sh** - A simple script that checks for the existence of data files and reports their status.
-2. **test_date_download.sh** - Tests which dates are available for download.
-3. **test_activities_download.sh** - Tests the activities download functionality.
+1. **test_date_download.sh** - Tests which dates are available for download.
+2. **test_activities_download.sh** - Tests the activities download functionality.
 
 ## Best Practices Implemented
 
