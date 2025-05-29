@@ -71,7 +71,7 @@ else
             echo "Trying system Python as fallback..."
             PYTHON_EXEC="python3"
         fi
-        $PYTHON_EXEC -c "import sys; sys.path.append('.'); from garmin_sync import connect_to_garmin, download_today_activities; client = connect_to_garmin(non_interactive=True, allow_mfa=False); download_today_activities(client, 'ORIGINAL') if client else print('Failed to connect to Garmin Connect')"
+        $PYTHON_EXEC -c "import sys; sys.path.append('.'); from garmin_sync import connect_to_garmin, download_today_activities; client = connect_to_garmin(non_interactive=True, allow_mfa=True); download_today_activities(client, 'ORIGINAL') if client else print('Failed to connect to Garmin Connect')"
     else
         echo "Error: Garmin credentials not found."
         echo "Please either:"
@@ -93,7 +93,7 @@ mkdir -p "$CSV_PATH"
 EXPORTS_DIR="./exports"
 if [ -d "$EXPORTS_DIR" ]; then
     echo "Copying new FIT files to Nextcloud activities folder: $ACTIVITIES_PATH"
-    for file in "$EXPORTS_DIR/activities"/*.fit 2>/dev/null; do
+    for file in "$EXPORTS_DIR/activities"/*.fit; do
         [ -f "$file" ] || continue
         filename=$(basename "$file")
         if [ ! -f "$ACTIVITIES_PATH/$filename" ]; then
@@ -102,7 +102,7 @@ if [ -d "$EXPORTS_DIR" ]; then
     done
     
     echo "Copying new JSON files to Nextcloud folder: $NEXTCLOUD_PATH"
-    for file in "$EXPORTS_DIR"/*.json 2>/dev/null; do
+    for file in "$EXPORTS_DIR"/*.json; do
         [ -f "$file" ] || continue
         filename=$(basename "$file")
         if [ ! -f "$NEXTCLOUD_PATH/$filename" ]; then
@@ -111,7 +111,16 @@ if [ -d "$EXPORTS_DIR" ]; then
     done
     
     echo "Copying new CSV files to Nextcloud CSV folder: $CSV_PATH"
-    for file in "$EXPORTS_DIR"/*.csv "$EXPORTS_DIR/activities"/*.csv 2>/dev/null; do
+    # Handle CSV files from exports root
+    for file in "$EXPORTS_DIR"/*.csv; do
+        [ -f "$file" ] || continue
+        filename=$(basename "$file")
+        if [ ! -f "$CSV_PATH/$filename" ]; then
+            cp "$file" "$CSV_PATH/" && echo "  ✓ Copied: $filename"
+        fi
+    done
+    # Handle CSV files from activities subdirectory
+    for file in "$EXPORTS_DIR/activities"/*.csv; do
         [ -f "$file" ] || continue
         filename=$(basename "$file")
         if [ ! -f "$CSV_PATH/$filename" ]; then
