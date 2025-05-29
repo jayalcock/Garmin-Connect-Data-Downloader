@@ -157,13 +157,13 @@ else
 
         # First try to get today's data
         echo "Attempting to download health data for today (${TODAY})..."
-        PY_OUT=$($PYTHON_EXEC -c "import sys; sys.path.append('.');from garmin_sync import connect_to_garmin, get_stats;import datetime;today=datetime.date.today().isoformat();client = connect_to_garmin(non_interactive=True, allow_mfa=False);get_stats(client, date_str=today, export=True, interactive=False) if client else print('Failed to connect to Garmin Connect')" 2>&1)
+        PY_OUT=$($PYTHON_EXEC -c "import sys; sys.path.append('.');from garmin_sync import connect_to_garmin, get_stats;import datetime;today=datetime.date.today().isoformat();client = connect_to_garmin(non_interactive=True, allow_mfa=True);get_stats(client, date_str=today, export=True, interactive=False) if client else print('Failed to connect to Garmin Connect')" 2>&1)
         echo "$PY_OUT"
 
         # Check if today's data file was created
         if [ ! -f "./exports/garmin_stats_${TODAY}_raw.json" ]; then
             echo "Today's data not available yet. Attempting to download yesterday's data as fallback..."
-            PY_OUT2=$($PYTHON_EXEC -c "import sys; sys.path.append('.');from garmin_sync import connect_to_garmin, get_stats;import datetime;yesterday=(datetime.date.today() - datetime.timedelta(days=1)).isoformat();client = connect_to_garmin(non_interactive=True, allow_mfa=False);get_stats(client, date_str=yesterday, export=True, interactive=False) if client else print('Failed to connect to Garmin Connect')" 2>&1)
+            PY_OUT2=$($PYTHON_EXEC -c "import sys; sys.path.append('.');from garmin_sync import connect_to_garmin, get_stats;import datetime;yesterday=(datetime.date.today() - datetime.timedelta(days=1)).isoformat();client = connect_to_garmin(non_interactive=True, allow_mfa=True);get_stats(client, date_str=yesterday, export=True, interactive=False) if client else print('Failed to connect to Garmin Connect')" 2>&1)
             echo "$PY_OUT2"
         fi
 
