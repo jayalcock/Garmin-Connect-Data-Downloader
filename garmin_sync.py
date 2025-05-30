@@ -857,7 +857,38 @@ def download_activity_file(garmin_client: Optional[Garmin], activity_id: str,
         return None
         
     try:
-        # Get valid format type
+        # Handle CSV format specially - download as FIT first, then convert
+        if format_type.upper() == 'CSV':
+            print(f"CSV format requested - downloading as FIT first, then converting to CSV...")
+            # Download as FIT first
+            fit_file_path = download_activity_file(garmin_client, activity_id, 'ORIGINAL', output_dir, create_chatgpt_summary=False)
+            if not fit_file_path:
+                print("Failed to download FIT file for CSV conversion")
+                return None
+            
+            # Convert FIT to CSV
+            try:
+                from utils.fit_to_csv import fit_to_csv
+                print(f"Converting FIT file to CSV: {fit_file_path}")
+                csv_file_path = fit_to_csv(fit_file_path, output_dir)
+                if csv_file_path:
+                    print(f"Successfully converted to CSV: {csv_file_path}")
+                    # Create ChatGPT summary if requested
+                    if create_chatgpt_summary:
+                        try:
+                            from utils.create_chatgpt_summary import create_chatgpt_summary
+                            create_chatgpt_summary(csv_file_path)
+                        except ImportError:
+                            print("Warning: Could not import create_chatgpt_summary")
+                    return csv_file_path
+                else:
+                    print("Failed to convert FIT file to CSV")
+                    return None
+            except ImportError:
+                print("Error: Could not import fit_to_csv utility")
+                return None
+        
+        # Get valid format type for non-CSV formats
         format_enum = None
         try:
             format_enum = getattr(Garmin.ActivityDownloadFormat, format_type.upper())
@@ -866,40 +897,65 @@ def download_activity_file(garmin_client: Optional[Garmin], activity_id: str,
             print("Valid formats: ORIGINAL, TCX, GPX, KML, CSV")
             return None
         
-        # Get activity details for filename
-        activity = garmin_client.get_activity_details(activity_id)
-        if not activity:
-            print(f"Activity ID {activity_id} not found")
-            return None
-        
-        # Extract activity information for filename
-        # For summary, check both activitySummary and summaryDTO paths
-        summary = activity.get("activitySummary", activity.get("summaryDTO", {}))
-        
-        # Get start time for the filename
+        # Get activity start time from activities list (not activity details)
+        # The activity details API doesn't return start time, but the activities list does
         start_time_local = None
-        # Try different paths where start time might be found
-        if "startTimeLocal" in summary:
-            start_time_local = summary.get("startTimeLocal", "")
-        elif "startTimeLocal" in activity:
-            start_time_local = activity.get("startTimeLocal", "")
+        activity_name = None
+        activity_type = "activity"  # Default value
+        
+        print(f"Searching for activity {activity_id} in recent activities to get start time...")
+        
+        # Get recent activities to find the one with matching ID
+        try:
+            activities = garmin_client.get_activities(0, 50)  # Get more activities to ensure we find it
+            target_activity = None
+            
+            for activity in activities:
+                if str(activity.get("activityId")) == str(activity_id):
+                    target_activity = activity
+                    break
+            
+            if target_activity:
+                print(f"Found activity {activity_id} in activities list")
+                start_time_local = target_activity.get("startTimeLocal", "")
+                activity_name = target_activity.get("activityName", "")
+                
+                # Get activity type
+                if "activityType" in target_activity and isinstance(target_activity["activityType"], dict):
+                    activity_type = target_activity["activityType"].get("typeKey", "activity")
+                
+                print(f"Activity start time: {start_time_local}")
+                print(f"Activity name: {activity_name}")
+                print(f"Activity type: {activity_type}")
+            else:
+                print(f"Warning: Activity {activity_id} not found in recent activities list")
+                # Fallback: try to get basic details (though they won't have start time)
+                activity_details = garmin_client.get_activity_details(activity_id)
+                if activity_details:
+                    print("Got basic activity details without start time")
+        except Exception as e:
+            print(f"Error getting activities list: {e}")
+            start_time_local = None
             
         if start_time_local:
-            # Convert YYYY-MM-DDThh:mm:ss.000 to YYYY-MM-DD_hhmmss
-            start_time_local = start_time_local.replace("T", "_").replace(":", "").split(".")[0]
+            # Convert YYYY-MM-DD hh:mm:ss to YYYY-MM-DD_hhmmss
+            # Handle different datetime formats that might be present
+            if "T" in str(start_time_local):
+                start_time_local = str(start_time_local).replace("T", "_").replace(":", "").split(".")[0]
+            elif " " in str(start_time_local):
+                # Handle format like "2025-05-30 06:57:20"
+                date_part, time_part = str(start_time_local).split(" ", 1)
+                time_part = time_part.replace(":", "")
+                start_time_local = f"{date_part}_{time_part}"
+            print(f"Processed start_time_local for filename: {start_time_local}")
         else:
             # Use current timestamp as fallback
             start_time_local = dt.datetime.now().strftime("%Y-%m-%d_%H%M%S")
+            print(f"Using fallback timestamp: {start_time_local}")
         
-        # Get activity name
-        activity_name = None
-        if "activityName" in activity:
-            activity_name = activity.get("activityName", "").replace(" ", "_")
-            
-        # Get activity type
-        activity_type = "activity"  # Default value
-        if "activityType" in activity and isinstance(activity["activityType"], dict):
-            activity_type = activity["activityType"].get("typeKey", "activity")
+        # Clean up activity name for filename
+        if activity_name:
+            activity_name = activity_name.replace(" ", "_")
         
         # Create sanitized filename
         filename_parts = []
@@ -1176,6 +1232,93 @@ def download_today_activities(garmin_client: Optional[Garmin], format_type: str 
                 download_activity_file(garmin_client, activity_id, format_type)
             
         print(f"\nFinished downloading all {len(todays_activities)} activities from today.")
+        
+    except (ConnectionError, TimeoutError) as e:
+        print(f"Connection error while getting activities: {e}")
+    except ValueError as e:
+        print(f"Value error while getting activities: {e}")
+    except Exception as e:
+        print(f"Error getting activities: {e}")
+        traceback.print_exc()
+
+def download_activities(garmin_client: Optional[Garmin], start_date: dt.datetime, format_type: str = 'ORIGINAL') -> None:
+    """Download activities from a date range starting from start_date to today
+    
+    Args:
+        garmin_client: The Garmin Connect client
+        start_date: The start date (datetime object) to download activities from
+        format_type: Format type ('TCX', 'GPX', 'KML', 'CSV', 'ORIGINAL'), defaults to ORIGINAL
+                    Note: ORIGINAL format returns a ZIP archive containing the .fit file, which
+                    is automatically extracted
+    """
+    if not garmin_client:
+        print("Not connected to Garmin Connect")
+        return
+    
+    # Convert start_date to date string for comparison
+    start_date_str = start_date.date().isoformat()
+    today_date = dt.date.today().isoformat()
+    
+    print(f"Searching for activities from {start_date_str} to {today_date}...")
+    
+    # Calculate the number of days to look back
+    days_diff = (dt.date.today() - start_date.date()).days + 1
+    
+    # Get activities (we need to fetch more to cover the full range)
+    # Garmin API typically returns activities in reverse chronological order
+    limit = min(days_diff * 5, 100)  # Estimate 5 activities per day max, cap at 100
+    
+    try:
+        activities = garmin_client.get_activities(0, limit)
+        
+        if not activities:
+            print("No recent activities found.")
+            return
+        
+        # Filter for activities in the date range
+        matching_activities = []
+        for activity in activities:
+            # Prefer local time; fallback to GMT timestamp
+            start_time = activity.get("startTimeLocal") or activity.get("startTimeGMT")
+            if not start_time:
+                continue
+            
+            # Handle both 'T' and space-separated datetime formats
+            if 'T' in start_time:
+                date_token = start_time.split('T')[0]
+            else:
+                date_token = start_time.split()[0]
+            
+            # Check if activity date is within our range
+            try:
+                activity_date = dt.date.fromisoformat(date_token)
+                if start_date.date() <= activity_date <= dt.date.today():
+                    matching_activities.append(activity)
+            except ValueError:
+                # Skip activities with invalid dates
+                continue
+        
+        if not matching_activities:
+            print(f"No activities found in the date range {start_date_str} to {today_date}.")
+            print("Debug: Recent activity timestamps:")
+            for idx, activity in enumerate(activities[:5], start=1):
+                ts = activity.get("startTimeLocal") or activity.get("startTimeGMT")
+                print(f"  {idx}. {ts}")
+            return
+        
+        print(f"Found {len(matching_activities)} activities in the date range.")
+        
+        # Download each activity
+        for i, activity in enumerate(matching_activities, 1):
+            activity_id = activity.get("activityId")
+            name = activity.get("activityName", "Unknown")
+            start_time = activity.get("startTimeLocal") or activity.get("startTimeGMT")
+            
+            if activity_id:
+                print(f"\nDownloading activity {i}/{len(matching_activities)}: {name} ({start_time})")
+                download_activity_file(garmin_client, activity_id, format_type)
+            
+        print(f"\nFinished downloading all {len(matching_activities)} activities from the date range.")
         
     except (ConnectionError, TimeoutError) as e:
         print(f"Connection error while getting activities: {e}")

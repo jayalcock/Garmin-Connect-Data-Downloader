@@ -107,7 +107,7 @@ def download_command(args):
                 return False
 
     # Connect to Garmin
-    client = connect_to_garmin()
+    client = connect_to_garmin(non_interactive=True, allow_mfa=False)
     if not client:
         print("Failed to connect to Garmin Connect")
         return False

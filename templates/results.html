@@ -40,10 +40,10 @@
                                             <td>{{ result.result_type }}</td>
                                             <td class="text-center">
                                                 <div class="btn-group btn-group-sm">
-                                                    <a href="{{ url_for('view_result', result_id=result.id) }}" class="btn btn-outline-primary">
+                                                    <a href="{{ url_for('view_result', result_dir=result.dir) }}" class="btn btn-outline-primary">
                                                         <i class="bi bi-eye"></i> View
                                                     </a>
-                                                    <a href="{{ url_for('download_result', result_id=result.id) }}" class="btn btn-outline-secondary">
+                                                    <a href="{{ url_for('download_result', result_id=result.id, file_type='csv') }}" class="btn btn-outline-secondary">
                                                         <i class="bi bi-download"></i> Download
                                                     </a>
                                                     <a href="{{ url_for('delete_result', result_id=result.id) }}" 
@@ -58,50 +58,6 @@
                                 </tbody>
                             </table>
                         </div>
-                        
-                        {% if pagination.pages > 1 %}
-                            <nav aria-label="Results pagination" class="mt-4">
-                                <ul class="pagination justify-content-center">
-                                    {% if pagination.has_prev %}
-                                        <li class="page-item">
-                                            <a class="page-link" href="{{ url_for('results', page=pagination.prev_num) }}">Previous</a>
-                                        </li>
-                                    {% else %}
-                                        <li class="page-item disabled">
-                                            <span class="page-link">Previous</span>
-                                        </li>
-                                    {% endif %}
-                                    
-                                    {% for page_num in pagination.iter_pages() %}
-                                        {% if page_num %}
-                                            {% if page_num == pagination.page %}
-                                                <li class="page-item active">
-                                                    <span class="page-link">{{ page_num }}</span>
-                                                </li>
-                                            {% else %}
-                                                <li class="page-item">
-                                                    <a class="page-link" href="{{ url_for('results', page=page_num) }}">{{ page_num }}</a>
-                                                </li>
-                                            {% endif %}
-                                        {% else %}
-                                            <li class="page-item disabled">
-                                                <span class="page-link">…</span>
-                                            </li>
-                                        {% endif %}
-                                    {% endfor %}
-                                    
-                                    {% if pagination.has_next %}
-                                        <li class="page-item">
-                                            <a class="page-link" href="{{ url_for('results', page=pagination.next_num) }}">Next</a>
-                                        </li>
-                                    {% else %}
-                                        <li class="page-item disabled">
-                                            <span class="page-link">Next</span>
-                                        </li>
-                                    {% endif %}
-                                </ul>
-                            </nav>
-                        {% endif %}
                     {% endif %}
                 </div>
             </div>

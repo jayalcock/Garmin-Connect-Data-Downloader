@@ -19,6 +19,7 @@ import json
 import time
 import shutil
 import tempfile
+import zipfile
 from datetime import datetime, timedelta
 from pathlib import Path
 from werkzeug.utils import secure_filename
@@ -89,7 +90,8 @@ class DownloadForm(FlaskForm):
     format_type = SelectField('Format Type', 
                               choices=[('ORIGINAL', 'ORIGINAL (FIT)'), 
                                        ('TCX', 'TCX'), 
-                                       ('GPX', 'GPX')],
+                                       ('GPX', 'GPX'),
+                                       ('CSV', 'CSV (Converted from FIT)')],
                               default='ORIGINAL')
     submit = SubmitField('Download Activities')
 
@@ -737,11 +739,18 @@ def results():
                 command = parts[0]
                 timestamp = '_'.join(parts[1:])
                 
+                # Create result object that matches template expectations
                 results.append({
+                    'id': dir_name,  # Use full directory name as ID
                     'dir': str(result_dir.name),
                     'command': command,
                     'timestamp': timestamp,
-                    'mtime': os.path.getmtime(result_dir)
+                    'mtime': os.path.getmtime(result_dir),
+                    'created_at': datetime.fromtimestamp(os.path.getmtime(result_dir)).strftime("%Y-%m-%d %H:%M:%S"),
+                    'title': f"{command.title()} - {timestamp}",
+                    'type': command,
+                    'type_color': 'primary' if command == 'health_stats' else 'success' if command == 'download' else 'info',
+                    'result_type': 'Health Stats' if command == 'health_stats' else command.title()
                 })
     
     return render_template('results.html', results=results)
@@ -762,6 +771,10 @@ def view_result(result_dir):
     output_file = None
     html_report = None
     
+    # Track if we have CSV and FIT files (including in subdirectories)
+    has_csv_files = False
+    has_fit_files = False
+    
     for file in full_path.glob('*'):
         if file.is_file():
             if file.suffix == '.md':
@@ -775,16 +788,28 @@ def view_result(result_dir):
                 html_report = file.name
             elif file.suffix == '.png':
                 charts.append(file.name)
+            elif file.suffix == '.csv':
+                has_csv_files = True
+                files.append(file.name)
+            elif file.suffix == '.fit':
+                has_fit_files = True
+                files.append(file.name)
             else:
                 files.append(file.name)
     
-    # Check for subdirectories with charts
+    # Check for subdirectories with charts and data files
     chart_dirs = {}
     for subdir in full_path.glob('*'):
         if subdir.is_dir():
             subdir_charts = [f.name for f in subdir.glob('*.png')]
             if subdir_charts:
                 chart_dirs[subdir.name] = subdir_charts
+            
+            # Check for CSV and FIT files in subdirectories
+            if not has_csv_files:
+                has_csv_files = any(subdir.glob('*.csv'))
+            if not has_fit_files:
+                has_fit_files = any(subdir.glob('*.fit'))
     
     # Read content of markdown files if they exist
     summary_content = None
@@ -802,8 +827,27 @@ def view_result(result_dir):
         with open(full_path / output_file, 'r') as f:
             output_content = f.read()
     
+    # Create a result object that matches the template expectations
+    result = {
+        'id': result_dir,
+        'title': f"Result: {result_dir}",
+        'created_at': datetime.fromtimestamp(os.path.getmtime(full_path)).strftime("%Y-%m-%d %H:%M:%S"),
+        'type': result_dir.split('_')[0] if '_' in result_dir else 'unknown',
+        'type_color': 'primary',
+        'result_type': 'Analysis' if analysis_file else ('Processing' if files else 'Data'),
+        'metadata': None,
+        'files': {
+            'csv': has_csv_files,
+            'fit': has_fit_files,
+            'summary': summary_file is not None,
+            'analysis': analysis_file is not None,
+            'chatgpt': any('chatgpt' in f for f in files)
+        }
+    }
+    
     return render_template(
         'view_result.html',
+        result=result,
         result_dir=result_dir,
         files=files,
         charts=charts,
@@ -827,6 +871,138 @@ def result_subdir_file(result_dir, subdir, filename):
     """Serve files from result subdirectories"""
     return send_from_directory(RESULTS_DIR / result_dir / subdir, filename)
 
+@app.route('/download_result/<result_id>/<file_type>')
+def download_result(result_id, file_type):
+    """Download specific file types from result directories"""
+    # Find the result directory that matches the result_id
+    # The result_id is typically a timestamp like "20250530_123456"
+    # and the directory name is like "health_stats_20250530_123456"
+    
+    result_dir = None
+    for potential_dir in RESULTS_DIR.glob(f"*{result_id}"):
+        if potential_dir.is_dir():
+            result_dir = potential_dir
+            break
+    
+    if not result_dir:
+        # Try exact match
+        result_dir = RESULTS_DIR / result_id
+        if not result_dir.exists():
+            abort(404)
+    
+    # Map file_type to actual filename
+    if file_type == 'csv':
+        # Look for CSV files in the result directory
+        csv_files = list(result_dir.glob("*.csv"))
+        if csv_files:
+            # Filter out summary files and prefer full CSV files
+            full_csv_files = [f for f in csv_files if '_summary.csv' not in f.name]
+            if full_csv_files:
+                # Return the most recently modified full CSV file
+                most_recent_csv = max(full_csv_files, key=lambda f: f.stat().st_mtime)
+                return send_from_directory(result_dir, most_recent_csv.name)
+            else:
+                # Fallback to any CSV file if no full CSV found
+                most_recent_csv = max(csv_files, key=lambda f: f.stat().st_mtime)
+                return send_from_directory(result_dir, most_recent_csv.name)
+        # Also check for garmin_stats.csv specifically
+        if (result_dir / "garmin_stats.csv").exists():
+            return send_from_directory(result_dir, "garmin_stats.csv")
+        # Check subdirectories for CSV files
+        for subdir in result_dir.glob("*"):
+            if subdir.is_dir():
+                csv_files = list(subdir.glob("*.csv"))
+                if csv_files:
+                    # Filter out summary files and prefer full CSV files
+                    full_csv_files = [f for f in csv_files if '_summary.csv' not in f.name]
+                    if full_csv_files:
+                        # Return the most recently modified full CSV file from subdirectory
+                        most_recent_csv = max(full_csv_files, key=lambda f: f.stat().st_mtime)
+                        return send_from_directory(subdir, most_recent_csv.name)
+                    else:
+                        # Fallback to any CSV file if no full CSV found
+                        most_recent_csv = max(csv_files, key=lambda f: f.stat().st_mtime)
+                        return send_from_directory(subdir, most_recent_csv.name)
+    
+    elif file_type == 'fit':
+        # Look for FIT files
+        fit_files = list(result_dir.glob("*.fit"))
+        if fit_files:
+            return send_from_directory(result_dir, fit_files[0].name)
+        # Check subdirectories for FIT files
+        for subdir in result_dir.glob("*"):
+            if subdir.is_dir():
+                fit_files = list(subdir.glob("*.fit"))
+                if fit_files:
+                    return send_from_directory(subdir, fit_files[0].name)
+    
+    elif file_type == 'summary':
+        # Look for summary markdown files
+        summary_files = list(result_dir.glob("*_summary.md"))
+        if summary_files:
+            return send_from_directory(result_dir, summary_files[0].name)
+    
+    elif file_type == 'analysis':
+        # Look for analysis markdown files
+        analysis_files = list(result_dir.glob("*_analysis.md"))
+        if analysis_files:
+            return send_from_directory(result_dir, analysis_files[0].name)
+    
+    elif file_type == 'chatgpt':
+        # Look for ChatGPT-formatted files
+        chatgpt_files = list(result_dir.glob("*_chatgpt.md"))
+        if chatgpt_files:
+            return send_from_directory(result_dir, chatgpt_files[0].name)
+    
+    elif file_type == 'archive':
+        # Look for archive directory or zip files
+        archive_dir = result_dir / "archive"
+        if archive_dir.exists():
+            # Create a zip file of the archive directory on-the-fly
+            import zipfile
+            import tempfile
+            
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.zip') as tmp_file:
+                with zipfile.ZipFile(tmp_file.name, 'w') as zip_file:
+                    for file_path in archive_dir.rglob('*'):
+                        if file_path.is_file():
+                            zip_file.write(file_path, file_path.relative_to(archive_dir))
+                
+                return send_from_directory(
+                    os.path.dirname(tmp_file.name), 
+                    os.path.basename(tmp_file.name),
+                    as_attachment=True,
+                    download_name=f"garmin_archive_{result_id}.zip"
+                )
+    
+    # If no matching file found
+    abort(404)
+
+@app.route('/delete_result/<result_id>')
+def delete_result(result_id):
+    """Delete a result directory"""
+    # Find the result directory that matches the result_id
+    result_dir = None
+    for potential_dir in RESULTS_DIR.glob(f"*{result_id}"):
+        if potential_dir.is_dir():
+            result_dir = potential_dir
+            break
+    
+    if not result_dir:
+        # Try exact match
+        result_dir = RESULTS_DIR / result_id
+        if not result_dir.exists():
+            abort(404)
+    
+    try:
+        # Remove the entire result directory
+        shutil.rmtree(result_dir)
+        flash(f"Result {result_id} has been deleted successfully.", "success")
+    except Exception as e:
+        flash(f"Error deleting result: {str(e)}", "danger")
+    
+    return redirect(url_for('results'))
+
 @app.route('/garmin-login', methods=['POST'])
 def garmin_login():
     """Handle Garmin login via AJAX"""
@@ -846,4 +1022,4 @@ def garmin_login():
     return jsonify({'success': True, 'message': 'Login successful'})
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0')
+    app.run(debug=True, host='0.0.0.0', port=5001)

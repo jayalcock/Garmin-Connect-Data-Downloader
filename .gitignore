@@ -38,3 +38,6 @@ Thumbs.db
 # Exported data backup files if they should not be tracked
 # Uncomment if you don't want to track data
 exports/
+
+# Downloaded data files
+web_results/

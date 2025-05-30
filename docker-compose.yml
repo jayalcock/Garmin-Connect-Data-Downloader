@@ -12,6 +12,9 @@ services:
       - ./logs:/app/logs
       - ./exports:/app/exports
       - ./web_results:/app/web_results
+      # Secure credential mounts (read-only)
+      - ~/.garmin_config.json:/root/.garmin_config.json:ro
+      - ~/.garminconnect:/root/.garminconnect:ro
     environment:
       - FLASK_APP=web_app.py
       - FLASK_ENV=production
