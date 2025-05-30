@@ -15,6 +15,8 @@ import sys
 import pandas as pd
 import numpy as np
 from pathlib import Path
+import matplotlib
+matplotlib.use('Agg')  # Use non-interactive backend to prevent GUI issues
 import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib.gridspec import GridSpec

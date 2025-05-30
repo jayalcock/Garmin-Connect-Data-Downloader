@@ -23,7 +23,9 @@ def generate_workout_charts(csv_file, output_dir=None):
         Path to the charts directory if successful, None otherwise
     """
     try:
-        # Import visualization libraries
+        # Import visualization libraries and set non-interactive backend
+        import matplotlib
+        matplotlib.use('Agg')  # Use non-interactive backend to prevent GUI issues
         import matplotlib.pyplot as plt
         import seaborn as sns
     except ImportError as e:

@@ -277,6 +277,7 @@ def generate_charts(csv_file, advanced=False):
     try:
         # Dynamically import visualization dependencies
         import matplotlib
+        matplotlib.use('Agg')  # Use non-interactive backend to prevent GUI issues
         import matplotlib.pyplot as plt
         import seaborn as sns
         import pandas as pd
