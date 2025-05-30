@@ -37,12 +37,15 @@
                         
                         {% if csv_preview %}
                             <div class="card mb-4">
-                                <div class="card-header">Data Preview</div>
+                                <div class="card-header">Data Preview - Most Recent Data</div>
                                 <div class="card-body">
                                     <div class="table-responsive">
                                         {{ csv_preview.html|safe }}
                                     </div>
-                                    <p class="text-muted small">Showing first {{ csv_preview.rows }} rows of data.</p>
+                                    <p class="text-muted small">
+                                        Showing most recent {{ csv_preview.rows }} rows 
+                                        {% if csv_preview.total_rows %}of {{ csv_preview.total_rows }} total rows{% endif %}.
+                                    </p>
                                 </div>
                             </div>
                         {% endif %}
@@ -53,10 +56,18 @@
                                 <a href="{{ url_for('download_result', result_id=result_id, file_type='csv') }}" class="btn btn-outline-primary">
                                     <i class="bi bi-file-earmark-spreadsheet"></i> Download CSV
                                 </a>
+                                <a href="{{ url_for('download_json', result_id=result_id) }}" class="btn btn-outline-success">
+                                    <i class="bi bi-file-earmark-code"></i> Download JSON
+                                </a>
                                 <a href="{{ url_for('download_result', result_id=result_id, file_type='archive') }}" class="btn btn-outline-primary">
                                     <i class="bi bi-file-earmark-zip"></i> Download Archive
                                 </a>
                             </div>
+                            <p class="text-muted small mt-2">
+                                <strong>CSV:</strong> Structured tabular data for analysis • 
+                                <strong>JSON:</strong> Complete raw data from Garmin API • 
+                                <strong>Archive:</strong> All files in a zip
+                            </p>
                         </div>
                     {% endif %}
                     

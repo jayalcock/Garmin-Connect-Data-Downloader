@@ -24,7 +24,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from werkzeug.utils import secure_filename
 from flask import (Flask, render_template, request, redirect, url_for, 
-                   send_from_directory, flash, jsonify, abort)
+                   send_from_directory, send_file, flash, jsonify, abort)
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileRequired, FileAllowed
 from wtforms import StringField, IntegerField, SelectField, BooleanField, SubmitField
@@ -128,7 +128,7 @@ class HealthStatsForm(FlaskForm):
     days = IntegerField('Number of days to download', validators=[NumberRange(min=1, max=90)], default=1)
     start_date = StringField('Start Date (YYYY-MM-DD)', 
                              validators=[Optional()],
-                             description="Leave blank to use yesterday's date")
+                             description="Leave blank to use today's date")
     submit = SubmitField('Download Health Stats')
 
 class CommandArgs:
@@ -622,8 +622,8 @@ def health_stats():
                         except ValueError:
                             start_date = datetime.now().date() - timedelta(days=1)
                     else:
-                        # Default to yesterday if no date provided
-                        start_date = datetime.now().date() - timedelta(days=1)
+                        # Default to today if no date provided
+                        start_date = datetime.now().date()
                     
                     days = max(1, args.days)
                     success = True
@@ -674,17 +674,39 @@ def health_stats():
                             if os.path.getmtime(archive_file) > one_hour_ago:
                                 shutil.copy2(archive_file, result_archive_dir / archive_file.name)
                 
-                # Read the first few rows of the CSV for display
+                # Copy JSON files (raw health data) to result directory
+                exports_dir = Path("exports")
+                if exports_dir.exists():
+                    # Copy recently created JSON files
+                    current_time = time.time()
+                    one_hour_ago = current_time - 3600
+                    
+                    for json_file in exports_dir.glob("garmin_stats_*_raw.json"):
+                        if os.path.getmtime(json_file) > one_hour_ago:
+                            shutil.copy2(json_file, result_dir / json_file.name)
+                
+                # Read the most recent rows of the CSV for display
                 csv_preview = None
                 if (result_dir / "garmin_stats.csv").exists():
                     try:
                         import pandas as pd
-                        df = pd.read_csv(result_dir / "garmin_stats.csv", nrows=10)
-                        preview_html = df.to_html(classes="table table-striped table-bordered table-sm", index=False)
+                        # Read the entire CSV file
+                        df = pd.read_csv(result_dir / "garmin_stats.csv")
+                        
+                        # Sort by date to ensure proper chronological order
+                        if 'date' in df.columns:
+                            df['date'] = pd.to_datetime(df['date'])
+                            df = df.sort_values('date', ascending=False)  # Most recent first
+                        
+                        # Take the most recent 10 rows
+                        df_preview = df.head(10)
+                        
+                        preview_html = df_preview.to_html(classes="table table-striped table-bordered table-sm", index=False)
                         csv_preview = {
                             'html': preview_html,
-                            'rows': len(df),
-                            'columns': len(df.columns)
+                            'rows': len(df_preview),
+                            'columns': len(df_preview.columns),
+                            'total_rows': len(df)
                         }
                     except:
                         pass
@@ -695,7 +717,7 @@ def health_stats():
                     success=success,
                     output=command_output,
                     days=args.days,
-                    start_date=args.date if args.date else (datetime.now().date() - timedelta(days=1)).isoformat(),
+                    start_date=args.date if args.date else datetime.now().date().isoformat(),
                     csv_preview=csv_preview
                 )
             
@@ -1020,6 +1042,88 @@ def garmin_login():
     # TODO: Implement proper Garmin login logic
     
     return jsonify({'success': True, 'message': 'Login successful'})
+
+@app.route('/download_json/<result_id>')
+def download_json(result_id):
+    """Download JSON files for a health stats result"""
+    result_dir = RESULTS_DIR / f"health_stats_{result_id}"
+    
+    if not result_dir.exists():
+        flash("Result not found", "error")
+        return redirect(url_for('health_stats'))
+    
+    # Check if there are any JSON files to download
+    json_files = list(result_dir.glob("*.json"))
+    archive_json_files = []
+    
+    # Also check archive directory
+    archive_dir = result_dir / "archive"
+    if archive_dir.exists():
+        archive_json_files = list(archive_dir.glob("*.json"))
+    
+    all_json_files = json_files + archive_json_files
+    
+    if not all_json_files:
+        flash("No JSON files found for this result", "error")
+        return redirect(url_for('health_stats_result', result_id=result_id))
+    
+    if len(all_json_files) == 1:
+        # Single file, download directly
+        json_file = all_json_files[0]
+        return send_file(
+            json_file,
+            as_attachment=True,
+            download_name=json_file.name,
+            mimetype='application/json'
+        )
+    else:
+        # Multiple files, create a zip
+        import zipfile
+        import tempfile
+        
+        # Create a temporary zip file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.zip') as tmp_zip:
+            with zipfile.ZipFile(tmp_zip.name, 'w') as zipf:
+                for json_file in all_json_files:
+                    # Add file to zip with a clean name
+                    arcname = json_file.name
+                    if json_file.parent.name == "archive":
+                        arcname = f"archive/{json_file.name}"
+                    zipf.write(json_file, arcname)
+            
+            # Send the zip file
+            return send_file(
+                tmp_zip.name,
+                as_attachment=True,
+                download_name=f"health_stats_{result_id}_json.zip",
+                mimetype='application/zip'
+            )
+
+
+@app.route('/download_single_json/<result_id>/<filename>')
+def download_single_json(result_id, filename):
+    """Download a specific JSON file from a health stats result"""
+    result_dir = RESULTS_DIR / f"health_stats_{result_id}"
+    
+    if not result_dir.exists():
+        flash("Result not found", "error")
+        return redirect(url_for('health_stats'))
+    
+    # Look for the file in the main directory and archive
+    json_file = result_dir / filename
+    if not json_file.exists():
+        json_file = result_dir / "archive" / filename
+    
+    if not json_file.exists():
+        flash("JSON file not found", "error")
+        return redirect(url_for('health_stats_result', result_id=result_id))
+    
+    return send_file(
+        json_file,
+        as_attachment=True,
+        download_name=filename,
+        mimetype='application/json'
+    )
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001)
