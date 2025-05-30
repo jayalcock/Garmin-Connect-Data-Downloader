@@ -64,7 +64,7 @@ try:
     
     # First try direct import
     from garmin_cli import (
-        download_command, process_command, analyze_command
+        download_command, process_command, analyze_command, latest_command, compare_command
     )
     print("Successfully imported garmin_cli with direct import")
 except ImportError as e:
@@ -420,22 +420,126 @@ def compare():
     """Stub page for compare functionality."""
     return render_template('compare.html')
 
-# Comment out incomplete routes to avoid syntax errors
-# @app.route('/compare', methods=['GET', 'POST'])
-# def compare():
-#     pass
-#
-# @app.route('/compare_result/<result_id>')
-# def compare_result(result_id):
-#     pass
-#
-# @app.route('/latest', methods=['GET'])
-# def latest():
-#     pass
-
-@app.route('/latest', methods=['GET'])
+@app.route('/latest', methods=['GET', 'POST'])
 def latest():
-    """Stub page for latest functionality."""
+    """Process the latest workout with optional chart generation."""
+    
+    # Check for query parameters for direct processing
+    charts = request.args.get('charts', 'false').lower() == 'true'
+    advanced = request.args.get('advanced', 'false').lower() == 'true'
+    
+    # If this is a direct call with parameters, process immediately
+    if request.method == 'GET' and (charts or advanced):
+        # Create CLI args object
+        args = CommandArgs()
+        args.charts = charts
+        args.advanced = advanced
+        
+        # Redirect stdout/stderr to capture output
+        old_stdout, old_stderr = sys.stdout, sys.stderr
+        sys.stdout = sys.stderr = output = tempfile.NamedTemporaryFile(mode='w+')
+        
+        try:
+            success = latest_command(args)
+            
+            # Restore stdout/stderr and get output
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr
+            output.seek(0)
+            command_output = output.read()
+            output.close()
+            
+            if success:
+                # Create a unique results directory
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                result_dir = RESULTS_DIR / f"latest_{timestamp}"
+                result_dir.mkdir(exist_ok=True)
+                
+                # Find the processed files
+                script_dir = Path(__file__).parent
+                export_dir = script_dir / "exports" / "activities"
+                chatgpt_dir = script_dir / "exports" / "chatgpt_ready"
+                
+                if export_dir.exists():
+                    # Find the most recent FIT file
+                    fit_files = list(export_dir.glob("*.fit"))
+                    if fit_files:
+                        latest_fit = max(fit_files, key=os.path.getmtime)
+                        basename = latest_fit.stem
+                        
+                        # Copy summary file if it exists
+                        summary_file = chatgpt_dir / f"{basename}_summary.md"
+                        summary_content = None
+                        if summary_file.exists():
+                            with open(summary_file, "r", encoding="utf-8") as f:
+                                summary_content = f.read()
+                            # Copy to results directory
+                            dest_summary = result_dir / f"{basename}_summary.md"
+                            shutil.copy2(summary_file, dest_summary)
+                        
+                        # Copy CSV file if it exists
+                        csv_file = chatgpt_dir / f"{basename}.csv"
+                        if csv_file.exists():
+                            dest_csv = result_dir / f"{basename}.csv"
+                            shutil.copy2(csv_file, dest_csv)
+                        
+                        # Copy the original FIT file
+                        dest_fit = result_dir / latest_fit.name
+                        shutil.copy2(latest_fit, dest_fit)
+                        
+                        # Copy charts if they exist
+                        charts_dir = chatgpt_dir / "charts"
+                        if charts_dir.exists():
+                            dest_charts = result_dir / "charts"
+                            dest_charts.mkdir(exist_ok=True)
+                            
+                            for chart_file in charts_dir.glob(f"{basename}*.png"):
+                                shutil.copy2(chart_file, dest_charts)
+                        
+                        # Copy advanced charts if they exist
+                        advanced_charts_dir = chatgpt_dir / "advanced_charts"
+                        if advanced_charts_dir.exists():
+                            dest_advanced = result_dir / "advanced_charts"
+                            dest_advanced.mkdir(exist_ok=True)
+                            
+                            for chart_file in advanced_charts_dir.glob("*.png"):
+                                shutil.copy2(chart_file, dest_advanced)
+                            
+                            # Copy HTML dashboard if it exists
+                            dashboard_file = advanced_charts_dir / f"{basename}_dashboard.html"
+                            if dashboard_file.exists():
+                                shutil.copy2(dashboard_file, dest_advanced)
+                
+                return render_template(
+                    'latest_result.html',
+                    success=success,
+                    workout_title=f"Latest Workout - {basename}" if 'basename' in locals() else "Latest Workout",
+                    workout_date=datetime.now().strftime("%Y-%m-%d"),
+                    result_id=timestamp,
+                    command_output=command_output,
+                    charts_enabled=charts,
+                    advanced_enabled=advanced
+                )
+            else:
+                return render_template(
+                    'latest_result.html',
+                    success=False,
+                    error="Failed to process latest workout. " + command_output,
+                    command_output=command_output
+                )
+                
+        except Exception as e:
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr
+            output.close()
+            return render_template(
+                'latest_result.html',
+                success=False,
+                error=f"Error processing latest workout: {str(e)}",
+                command_output=str(e)
+            )
+    
+    # For regular GET request, show the form
     return render_template('latest.html')
 
 @app.route('/health_stats', methods=['GET', 'POST'])

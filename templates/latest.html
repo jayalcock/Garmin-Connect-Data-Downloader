@@ -1,9 +1,89 @@
 {% extends "base.html" %}
 
-{% block title %}Latest Results{% endblock %}
+{% block title %}Latest Workout{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
-    <div class="alert alert-info">This feature is not yet implemented. Please check back later.</div>
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Process Latest Workout</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> 
+                        This will find and process your most recently downloaded FIT file with optional visualization charts.
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5 class="mb-3">Processing Options</h5>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body text-center">
+                                        <i class="bi bi-bar-chart feature-icon text-primary" style="font-size: 2rem;"></i>
+                                        <h6 class="card-title">Basic Analysis</h6>
+                                        <p class="card-text small">Process latest workout with basic charts (heart rate, speed, elevation)</p>
+                                        <a href="{{ url_for('latest') }}?charts=true" class="btn btn-outline-primary">
+                                            <i class="bi bi-play-fill"></i> Process with Charts
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body text-center">
+                                        <i class="bi bi-graph-up-arrow feature-icon text-success" style="font-size: 2rem;"></i>
+                                        <h6 class="card-title">Advanced Analysis</h6>
+                                        <p class="card-text small">Process with sport-specific advanced visualizations (pace analysis, power zones, etc.)</p>
+                                        <a href="{{ url_for('latest') }}?charts=true&advanced=true" class="btn btn-success">
+                                            <i class="bi bi-lightning-fill"></i> Advanced Analysis
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <i class="bi bi-file-text feature-icon text-secondary" style="font-size: 2rem;"></i>
+                                        <h6 class="card-title">Summary Only</h6>
+                                        <p class="card-text small">Process latest workout and create summary without charts</p>
+                                        <a href="{{ url_for('latest') }}" class="btn btn-outline-secondary">
+                                            <i class="bi bi-file-earmark-text"></i> Summary Only
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="mt-3">
+                        <h5 class="mb-3">Don't have activities downloaded?</h5>
+                        <p>You need to download activities from Garmin Connect first before processing the latest one.</p>
+                        
+                        <div class="d-flex gap-2">
+                            <a href="{{ url_for('download') }}" class="btn btn-outline-primary">
+                                <i class="bi bi-cloud-download"></i> Download Activities
+                            </a>
+                            <a href="{{ url_for('analyze') }}" class="btn btn-outline-primary">
+                                <i class="bi bi-bar-chart"></i> Analyze Specific File
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-light">
+                    <p class="mb-0"><i class="bi bi-info-circle"></i> The latest workout processing looks for the most recently modified FIT file in your exports/activities directory.</p>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
