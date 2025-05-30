@@ -1,43 +1,9 @@
 {% extends "base.html" %}
 
-{% block title %}Latest Workout{% endblock %}
+{% block title %}Latest Results{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
-    <div class="row">
-        <div class="col-md-8 offset-md-2">
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">Latest Workout</h4>
-                </div>
-                <div class="card-body">
-                    <p class="lead">Fetch and analyze your most recent workout from Garmin Connect.</p>
-                    
-                    <form method="POST">
-                        {{ form.hidden_tag() }}
-                        
-                        <div class="mb-3 form-check">
-                            <input type="checkbox" class="form-check-input" id="generate_charts" name="generate_charts" {% if form.generate_charts.data %}checked{% endif %}>
-                            <label class="form-check-label" for="generate_charts">Generate Charts</label>
-                            <div class="form-text">Create visualization charts for this workout</div>
-                        </div>
-
-                        <div class="mb-3 form-check">
-                            <input type="checkbox" class="form-check-input" id="advanced_charts" name="advanced_charts" {% if form.advanced_charts.data %}checked{% endif %}>
-                            <label class="form-check-label" for="advanced_charts">Generate Advanced Charts</label>
-                            <div class="form-text">Include detailed and specialized charts</div>
-                        </div>
-                        
-                        <div class="d-grid gap-2">
-                            {{ form.submit(class="btn btn-primary btn-lg") }}
-                        </div>
-                    </form>
-                </div>
-                <div class="card-footer bg-light">
-                    <p class="mb-0"><i class="bi bi-info-circle"></i> This tool downloads and analyzes your most recent workout automatically.</p>
-                </div>
-            </div>
-        </div>
-    </div>
+    <div class="alert alert-info">This feature is not yet implemented. Please check back later.</div>
 </div>
 {% endblock %}

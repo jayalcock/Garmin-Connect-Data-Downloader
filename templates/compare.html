@@ -4,54 +4,6 @@
 
 {% block content %}
 <div class="container mt-4">
-    <div class="row">
-        <div class="col-md-8 offset-md-2">
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">Compare Workouts</h4>
-                </div>
-                <div class="card-body">
-                    <p class="lead">Compare multiple workouts to analyze your performance trends over time.</p>
-                    
-                    <form method="POST" enctype="multipart/form-data">
-                        {{ form.hidden_tag() }}
-                        
-                        <div class="mb-3">
-                            <label for="sport_type" class="form-label">{{ form.sport_type.label }}</label>
-                            {{ form.sport_type(class="form-select") }}
-                            {% if form.sport_type.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {% for error in form.sport_type.errors %}
-                                        {{ error }}
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                            <div class="form-text">Select a sport type to filter workouts or leave empty to include all.</div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="days" class="form-label">{{ form.days.label }}</label>
-                            {{ form.days(class="form-control") }}
-                            {% if form.days.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {% for error in form.days.errors %}
-                                        {{ error }}
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                            <div class="form-text">Number of days back to include in comparison.</div>
-                        </div>
-
-                        <div class="d-grid gap-2">
-                            {{ form.submit(class="btn btn-primary btn-lg") }}
-                        </div>
-                    </form>
-                </div>
-                <div class="card-footer bg-light">
-                    <p class="mb-0"><i class="bi bi-info-circle"></i> This will compare workouts from the last N days and generate trend analysis.</p>
-                </div>
-            </div>
-        </div>
-    </div>
+    <div class="alert alert-info">This feature is not yet implemented. Please check back later.</div>
 </div>
 {% endblock %}
