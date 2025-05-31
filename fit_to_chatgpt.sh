@@ -227,11 +227,16 @@ try:
         lap_df = df[df['record_type'] == 'lap']
         if len(lap_df) > 1:  # Only show if multiple laps
             f.write('## Lap Information\n\n')
-            f.write('| Lap | Distance | Time | Avg HR | Speed |\n')
-            f.write('|-----|----------|------|--------|---------|\n')
             
-            for i, lap in lap_df.iterrows():
-                lap_num = i + 1
+            # Use Pace for running, Speed for other activities
+            if sport_type.lower() == 'running':
+                f.write('| Lap | Distance | Time | Avg HR | Pace  |\n')
+                f.write('|-----|----------|------|--------|-------|\n')
+            else:
+                f.write('| Lap | Distance | Time | Avg HR | Speed |\n')
+                f.write('|-----|----------|------|--------|-------|\n')
+            
+            for lap_num, (i, lap) in enumerate(lap_df.iterrows(), 1):
                 
                 # Distance
                 lap_dist = lap.get('total_distance', 0)
@@ -247,15 +252,24 @@ try:
                 hr = lap.get('avg_heart_rate', 0)
                 hr_str = f\"{int(hr)}\" if hr > 0 else \"–\"
                 
-                # Speed
+                # Speed or Pace
                 speed = lap.get('avg_speed', 0)
                 if speed > 0:
-                    speed_kph = speed * 3.6
-                    speed_str = f\"{speed_kph:.1f} km/h\"
+                    if sport_type.lower() == 'running':
+                        # Calculate pace in min/km
+                        pace_seconds_per_km = 1000 / speed  # seconds per km
+                        pace_minutes = int(pace_seconds_per_km // 60)
+                        pace_seconds = int(pace_seconds_per_km % 60)
+                        pace_str = f\"{pace_minutes}:{pace_seconds:02d}/km\"
+                    else:
+                        # Show speed in km/h for non-running activities
+                        speed_kph = speed * 3.6
+                        pace_str = f\"{speed_kph:.1f} km/h\"
                 else:
-                    speed_str = \"–\"
+                    pace_str = \"–\"
                 
-                f.write(f\"| {lap_num} | {dist_str} | {time_str} | {hr_str} | {speed_str} |\\n\")
+                # Format with exact widths to match headers
+                f.write(f\"| {lap_num:3} | {dist_str:8} | {time_str:4} | {hr_str:6} | {pace_str:5} |\\n\")
             
             f.write('\\n')
         

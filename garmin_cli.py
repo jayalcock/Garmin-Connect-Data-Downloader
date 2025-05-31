@@ -584,9 +584,9 @@ def health_stats_command(args):
             print(f"Invalid date format: {args.date}. Please use YYYY-MM-DD format.")
             return False
     else:
-        # Default to yesterday if no date provided
+        # Default to today if no date provided
         from datetime import date, timedelta
-        start_date = date.today() - timedelta(days=1)
+        start_date = date.today()
     
     days = max(1, args.days)
     

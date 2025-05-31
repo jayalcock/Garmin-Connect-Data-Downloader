@@ -145,6 +145,69 @@ class CommandArgs:
         self.date = None
         self.non_interactive = None
 
+def parse_workout_summary(summary_csv_path: Path) -> dict:
+    """Parse workout metrics from summary CSV file."""
+    workout_metrics = {}
+    if not summary_csv_path.exists():
+        return workout_metrics
+    
+    try:
+        import csv
+        with open(summary_csv_path, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                workout_metrics[row['Metric']] = row['Value']
+    except Exception as e:
+        print(f"Error reading summary CSV: {e}")
+    
+    return workout_metrics
+
+def format_workout_data(workout_metrics: dict) -> dict:
+    """Format workout metrics for template display."""
+    formatted_data = {}
+    
+    # Extract and format key metrics
+    formatted_data['workout_type'] = workout_metrics.get('sport', 'Unknown').title()
+    
+    # Format duration
+    total_time = float(workout_metrics.get('total_elapsed_time', 0))
+    if total_time > 0:
+        hours = int(total_time // 3600)
+        minutes = int((total_time % 3600) // 60)
+        seconds = int(total_time % 60)
+        if hours > 0:
+            formatted_data['workout_duration'] = f"{hours}h {minutes}m {seconds}s"
+        else:
+            formatted_data['workout_duration'] = f"{minutes}m {seconds}s"
+    else:
+        formatted_data['workout_duration'] = "Unknown"
+    
+    # Format distance
+    distance_m = float(workout_metrics.get('total_distance', 0))
+    if distance_m > 0:
+        distance_km = distance_m / 1000
+        formatted_data['workout_distance'] = f"{distance_km:.2f} km"
+    else:
+        formatted_data['workout_distance'] = "Unknown"
+    
+    # Heart rate metrics
+    formatted_data['avg_hr'] = workout_metrics.get('avg_heart_rate', 'N/A')
+    formatted_data['max_hr'] = workout_metrics.get('max_heart_rate', 'N/A')
+    
+    # Calculate average pace for running activities
+    if workout_metrics.get('sport') == 'running' and distance_m > 0 and total_time > 0:
+        pace_seconds_per_km = (total_time / (distance_m / 1000))
+        pace_minutes = int(pace_seconds_per_km // 60)
+        pace_seconds = int(pace_seconds_per_km % 60)
+        formatted_data['avg_pace'] = f"{pace_minutes}:{pace_seconds:02d}/km"
+    else:
+        formatted_data['avg_pace'] = "N/A"
+    
+    # Calories
+    formatted_data['calories'] = workout_metrics.get('total_calories', 'N/A')
+    
+    return formatted_data
+
 @app.route('/')
 def home():
     """Home page with links to all functionality"""
@@ -455,6 +518,19 @@ def latest():
                 result_dir = RESULTS_DIR / f"latest_{timestamp}"
                 result_dir.mkdir(exist_ok=True)
                 
+                # Initialize default workout data
+                formatted_workout_data = {
+                    'workout_type': 'Unknown',
+                    'workout_duration': 'Unknown', 
+                    'workout_distance': 'Unknown',
+                    'avg_hr': 'N/A',
+                    'max_hr': 'N/A',
+                    'avg_pace': 'N/A',
+                    'calories': 'N/A'
+                }
+                summary_content = "No workout summary available."
+                basename = "latest_workout"
+                
                 # Find the processed files
                 script_dir = Path(__file__).parent
                 export_dir = script_dir / "exports" / "activities"
@@ -467,15 +543,25 @@ def latest():
                         latest_fit = max(fit_files, key=os.path.getmtime)
                         basename = latest_fit.stem
                         
-                        # Copy summary file if it exists
+                        # Parse workout metrics from summary CSV file using helper function
+                        summary_csv_file = export_dir / f"{basename}_summary.csv"
+                        workout_metrics = parse_workout_summary(summary_csv_file)
+                        formatted_workout_data = format_workout_data(workout_metrics)
+                        
+                        # Copy summary file from chatgpt_ready if it exists
                         summary_file = chatgpt_dir / f"{basename}_summary.md"
-                        summary_content = None
                         if summary_file.exists():
                             with open(summary_file, "r", encoding="utf-8") as f:
                                 summary_content = f.read()
                             # Copy to results directory
                             dest_summary = result_dir / f"{basename}_summary.md"
                             shutil.copy2(summary_file, dest_summary)
+                        
+                        # Check for summary file in activities directory as well
+                        summary_md_file = export_dir / f"{basename}.md"
+                        if summary_md_file.exists() and summary_content == "No workout summary available.":
+                            with open(summary_md_file, "r", encoding="utf-8") as f:
+                                summary_content = f.read()
                         
                         # Copy CSV file if it exists
                         csv_file = chatgpt_dir / f"{basename}.csv"
@@ -488,6 +574,7 @@ def latest():
                         shutil.copy2(latest_fit, dest_fit)
                         
                         # Copy charts if they exist
+                        charts_list = []
                         charts_dir = chatgpt_dir / "charts"
                         if charts_dir.exists():
                             dest_charts = result_dir / "charts"
@@ -495,8 +582,16 @@ def latest():
                             
                             for chart_file in charts_dir.glob(f"{basename}*.png"):
                                 shutil.copy2(chart_file, dest_charts)
+                                # Create chart info for template
+                                chart_name = chart_file.stem.replace(f"{basename}_", "").replace("_", " ").title()
+                                charts_list.append({
+                                    'title': chart_name,
+                                    'url': f"/results/latest_{timestamp}/charts/{chart_file.name}",
+                                    'filename': chart_file.name
+                                })
                         
                         # Copy advanced charts if they exist
+                        advanced_charts_list = []
                         advanced_charts_dir = chatgpt_dir / "advanced_charts"
                         if advanced_charts_dir.exists():
                             dest_advanced = result_dir / "advanced_charts"
@@ -504,6 +599,13 @@ def latest():
                             
                             for chart_file in advanced_charts_dir.glob("*.png"):
                                 shutil.copy2(chart_file, dest_advanced)
+                                # Create chart info for template
+                                chart_name = chart_file.stem.replace(f"{basename}_", "").replace("_", " ").title()
+                                advanced_charts_list.append({
+                                    'title': chart_name,
+                                    'url': f"/results/latest_{timestamp}/advanced_charts/{chart_file.name}",
+                                    'filename': chart_file.name
+                                })
                             
                             # Copy HTML dashboard if it exists
                             dashboard_file = advanced_charts_dir / f"{basename}_dashboard.html"
@@ -513,12 +615,24 @@ def latest():
                 return render_template(
                     'latest_result.html',
                     success=success,
-                    workout_title=f"Latest Workout - {basename}" if 'basename' in locals() else "Latest Workout",
+                    workout_title=f"Latest Workout - {basename}" if basename != "latest_workout" else "Latest Workout",
                     workout_date=datetime.now().strftime("%Y-%m-%d"),
                     result_id=timestamp,
                     command_output=command_output,
                     charts_enabled=charts,
-                    advanced_enabled=advanced
+                    advanced_enabled=advanced,
+                    # Add chart lists for template
+                    charts=charts_list if charts else [],
+                    advanced_charts=advanced_charts_list if advanced else [],
+                    # Add formatted workout data for template
+                    workout_type=formatted_workout_data.get('workout_type', 'Unknown'),
+                    workout_duration=formatted_workout_data.get('workout_duration', 'Unknown'),
+                    workout_distance=formatted_workout_data.get('workout_distance', 'Unknown'),
+                    avg_hr=formatted_workout_data.get('avg_hr', 'N/A'),
+                    max_hr=formatted_workout_data.get('max_hr', 'N/A'),
+                    avg_pace=formatted_workout_data.get('avg_pace', 'N/A'),
+                    calories=formatted_workout_data.get('calories', 'N/A'),
+                    workout_summary=summary_content
                 )
             else:
                 return render_template(

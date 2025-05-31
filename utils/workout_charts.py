@@ -307,9 +307,22 @@ def generate_workout_charts(csv_file, output_dir=None):
                 metrics.append(('avg_heart_rate', 'Heart Rate (bpm)'))
             
             if 'avg_speed' in lap_df.columns:
-                # Convert to km/h
-                lap_df['avg_speed_kmh'] = lap_df['avg_speed'] * 3.6
-                metrics.append(('avg_speed_kmh', 'Avg Speed (km/h)'))
+                # Get sport type for appropriate units
+                if not session_df.empty:
+                    sport = session_df.iloc[0].get('sport', 'activity')
+                    if sport.lower() == 'running':
+                        # For running, show pace (min/km) instead of speed
+                        valid_speed = lap_df['avg_speed'] > 0
+                        lap_df.loc[valid_speed, 'avg_pace'] = 60 / (lap_df.loc[valid_speed, 'avg_speed'] * 3.6)
+                        metrics.append(('avg_pace', 'Avg Pace (min/km)'))
+                    else:
+                        # For other activities, show speed in km/h
+                        lap_df['avg_speed_kmh'] = lap_df['avg_speed'] * 3.6
+                        metrics.append(('avg_speed_kmh', 'Avg Speed (km/h)'))
+                else:
+                    # Default to speed if no session data
+                    lap_df['avg_speed_kmh'] = lap_df['avg_speed'] * 3.6
+                    metrics.append(('avg_speed_kmh', 'Avg Speed (km/h)'))
                 
             if 'total_distance' in lap_df.columns:
                 # Convert to km
@@ -336,6 +349,17 @@ def generate_workout_charts(csv_file, output_dir=None):
                     sns.barplot(x='lap_number', y=metric, data=lap_df, ax=ax)
                     ax.set_ylabel(label)
                     ax.set_title(f'Lap {label}')
+                    
+                    # Special formatting for pace charts
+                    if metric == 'avg_pace':
+                        # Format y-axis as min:sec for pace
+                        from matplotlib.ticker import FuncFormatter
+                        def format_pace(y, pos):
+                            minutes = int(y)
+                            seconds = int((y - minutes) * 60)
+                            return f"{minutes}:{seconds:02d}"
+                        
+                        ax.yaxis.set_major_formatter(FuncFormatter(format_pace))
                     
                 fig.suptitle(f'Lap Analysis for {sport_type}')
                 plt.xlabel('Lap Number')
